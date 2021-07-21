@@ -18,17 +18,20 @@ package com.android.server.net;
 import static android.net.INetd.FIREWALL_CHAIN_DOZABLE;
 import static android.net.INetd.FIREWALL_CHAIN_ISOLATED;
 import static android.net.INetd.FIREWALL_CHAIN_POWERSAVE;
+import static android.net.INetd.FIREWALL_CHAIN_RESTRICTED;
 import static android.net.INetd.FIREWALL_CHAIN_STANDBY;
 import static android.net.INetd.FIREWALL_RULE_ALLOW;
 import static android.net.INetd.FIREWALL_RULE_DENY;
 import static android.net.NetworkPolicyManager.FIREWALL_CHAIN_NAME_DOZABLE;
 import static android.net.NetworkPolicyManager.FIREWALL_CHAIN_NAME_ISOLATED;
 import static android.net.NetworkPolicyManager.FIREWALL_CHAIN_NAME_POWERSAVE;
+import static android.net.NetworkPolicyManager.FIREWALL_CHAIN_NAME_RESTRICTED;
 import static android.net.NetworkPolicyManager.FIREWALL_CHAIN_NAME_STANDBY;
 import static android.net.NetworkPolicyManager.FIREWALL_RULE_DEFAULT;
 import static android.os.Process.INVALID_UID;
 
 import android.app.ActivityManager;
+import android.app.ActivityManager.ProcessCapability;
 import android.net.NetworkPolicyManager;
 import android.os.UserHandle;
 import android.util.Log;
@@ -72,13 +75,17 @@ public class NetworkPolicyLogger {
 
     static final int NTWK_BLOCKED_POWER = 0;
     static final int NTWK_ALLOWED_NON_METERED = 1;
-    static final int NTWK_BLOCKED_BLACKLIST = 2;
-    static final int NTWK_ALLOWED_WHITELIST = 3;
-    static final int NTWK_ALLOWED_TMP_WHITELIST = 4;
+    static final int NTWK_BLOCKED_DENYLIST = 2;
+    static final int NTWK_ALLOWED_ALLOWLIST = 3;
+    static final int NTWK_ALLOWED_TMP_ALLOWLIST = 4;
     static final int NTWK_BLOCKED_BG_RESTRICT = 5;
     static final int NTWK_ALLOWED_DEFAULT = 6;
     static final int NTWK_ALLOWED_SYSTEM = 7;
+<<<<<<< HEAD
     static final int NTWK_BLOCKED_ISOLATED = 8;
+=======
+    static final int NTWK_BLOCKED_RESTRICTED_MODE = 8;
+>>>>>>> 1a7b0835ced351de3f8f73b29a3b40996d335e65
 
     private final LogBuffer mNetworkBlockedBuffer = new LogBuffer(MAX_NETWORK_BLOCKED_LOG_SIZE);
     private final LogBuffer mUidStateChangeBuffer = new LogBuffer(MAX_LOG_SIZE);
@@ -97,13 +104,15 @@ public class NetworkPolicyLogger {
         }
     }
 
-    void uidStateChanged(int uid, int procState, long procStateSeq) {
+    void uidStateChanged(int uid, int procState, long procStateSeq,
+            @ProcessCapability int capability) {
         synchronized (mLock) {
             if (LOGV || uid == mDebugUid) {
                 Slog.v(TAG, uid + " state changed to "
-                        + ProcessList.makeProcStateString(procState) + " with seq=" + procStateSeq);
+                        + ProcessList.makeProcStateString(procState) + ",seq=" + procStateSeq
+                        + ",cap=" + ActivityManager.getCapabilitiesSummary(capability));
             }
-            mUidStateChangeBuffer.uidStateChanged(uid, procState, procStateSeq);
+            mUidStateChangeBuffer.uidStateChanged(uid, procState, procStateSeq, capability);
         }
     }
 
@@ -272,18 +281,23 @@ public class NetworkPolicyLogger {
                 return "blocked by power restrictions";
             case NTWK_ALLOWED_NON_METERED:
                 return "allowed on unmetered network";
-            case NTWK_BLOCKED_BLACKLIST:
-                return "blacklisted on metered network";
-            case NTWK_ALLOWED_WHITELIST:
-                return "whitelisted on metered network";
-            case NTWK_ALLOWED_TMP_WHITELIST:
-                return "temporary whitelisted on metered network";
+            case NTWK_BLOCKED_DENYLIST:
+                return "denylisted on metered network";
+            case NTWK_ALLOWED_ALLOWLIST:
+                return "allowlisted on metered network";
+            case NTWK_ALLOWED_TMP_ALLOWLIST:
+                return "temporary allowlisted on metered network";
             case NTWK_BLOCKED_BG_RESTRICT:
                 return "blocked when background is restricted";
             case NTWK_ALLOWED_DEFAULT:
                 return "allowed by default";
+<<<<<<< HEAD
             case NTWK_BLOCKED_ISOLATED:
                 return "blocked by isolation";
+=======
+            case NTWK_BLOCKED_RESTRICTED_MODE:
+                return "blocked by restricted networking mode";
+>>>>>>> 1a7b0835ced351de3f8f73b29a3b40996d335e65
             default:
                 return String.valueOf(reason);
         }
@@ -344,8 +358,13 @@ public class NetworkPolicyLogger {
                 return FIREWALL_CHAIN_NAME_STANDBY;
             case FIREWALL_CHAIN_POWERSAVE:
                 return FIREWALL_CHAIN_NAME_POWERSAVE;
+<<<<<<< HEAD
             case FIREWALL_CHAIN_ISOLATED:
                 return FIREWALL_CHAIN_NAME_ISOLATED;
+=======
+            case FIREWALL_CHAIN_RESTRICTED:
+                return FIREWALL_CHAIN_NAME_RESTRICTED;
+>>>>>>> 1a7b0835ced351de3f8f73b29a3b40996d335e65
             default:
                 return String.valueOf(chain);
         }
@@ -373,7 +392,8 @@ public class NetworkPolicyLogger {
             super(Data.class, capacity);
         }
 
-        public void uidStateChanged(int uid, int procState, long procStateSeq) {
+        public void uidStateChanged(int uid, int procState, long procStateSeq,
+                @ProcessCapability int capability) {
             final Data data = getNextSlot();
             if (data == null) return;
 
@@ -381,6 +401,7 @@ public class NetworkPolicyLogger {
             data.type = EVENT_UID_STATE_CHANGED;
             data.ifield1 = uid;
             data.ifield2 = procState;
+            data.ifield3 = capability;
             data.lfield1 = procStateSeq;
             data.timeStamp = System.currentTimeMillis();
         }
@@ -546,8 +567,9 @@ public class NetworkPolicyLogger {
                 case EVENT_NETWORK_BLOCKED:
                     return data.ifield1 + "-" + getBlockedReason(data.ifield2);
                 case EVENT_UID_STATE_CHANGED:
-                    return data.ifield1 + "-" + ProcessList.makeProcStateString(data.ifield2)
-                            + "-" + data.lfield1;
+                    return data.ifield1 + ":" + ProcessList.makeProcStateString(data.ifield2)
+                            + ":" + ActivityManager.getCapabilitiesSummary(data.ifield3)
+                            + ":" + data.lfield1;
                 case EVENT_POLICIES_CHANGED:
                     return getPolicyChangedLog(data.ifield1, data.ifield2, data.ifield3);
                 case EVENT_METEREDNESS_CHANGED:

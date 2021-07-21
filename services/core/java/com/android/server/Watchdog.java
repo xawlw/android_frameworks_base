@@ -25,21 +25,21 @@ import android.hidl.manager.V1_0.IServiceManager;
 import android.os.Binder;
 import android.os.Build;
 import android.os.Debug;
+import android.os.FileUtils;
 import android.os.Handler;
 import android.os.IPowerManager;
 import android.os.Looper;
 import android.os.Process;
 import android.os.RemoteException;
+import android.os.ServiceDebugInfo;
 import android.os.ServiceManager;
 import android.os.SystemClock;
-import android.system.ErrnoException;
-import android.system.Os;
-import android.system.OsConstants;
-import android.system.StructRlimit;
+import android.os.SystemProperties;
 import android.util.EventLog;
 import android.util.Log;
 import android.util.Slog;
 import android.util.SparseArray;
+import android.sysprop.WatchdogProperties;
 
 import com.android.internal.os.ProcessCpuTracker;
 import com.android.internal.os.ZygoteConnectionConstants;
@@ -47,17 +47,16 @@ import com.android.internal.util.FrameworkStatsLog;
 import com.android.server.am.ActivityManagerService;
 import com.android.server.wm.SurfaceAnimationThread;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.StringWriter;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
+import java.util.concurrent.TimeUnit;
 import java.util.HashSet;
 import java.util.List;
 
@@ -76,7 +75,8 @@ public class Watchdog extends Thread {
     //         can trigger the watchdog.
     // Note 2: The debug value is already below the wait time in ZygoteConnection. Wrapped
     //         applications may not work with a debug build. CTS will fail.
-    private static final long DEFAULT_TIMEOUT = DB ? 10 * 1000 : 60 * 1000;
+    private static final long DEFAULT_TIMEOUT =
+            (DB ? 10 * 1000 : 60 * 1000) * Build.HW_TIMEOUT_MULTIPLIER;
     private static final long CHECK_INTERVAL = DEFAULT_TIMEOUT / 2;
 
     // Watchdog was started early during boot. Bug: 129597207.
@@ -89,11 +89,18 @@ public class Watchdog extends Thread {
     private static final int WAITED_HALF = 2;
     private static final int OVERDUE = 3;
 
+    // Track watchdog timeout history and break the crash loop if there is.
+    private static final String TIMEOUT_HISTORY_FILE = "/data/system/watchdog-timeout-history.txt";
+    private static final String PROP_FATAL_LOOP_COUNT = "framework_watchdog.fatal_count";
+    private static final String PROP_FATAL_LOOP_WINDOWS_SECS =
+            "framework_watchdog.fatal_window.second";
+
     // Which native processes to dump into dropbox's stack traces
     public static final String[] NATIVE_STACKS_OF_INTEREST = new String[] {
         "/system/bin/audioserver",
         "/system/bin/cameraserver",
         "/system/bin/drmserver",
+        "/system/bin/keystore2",
         "/system/bin/mediadrmserver",
         "/system/bin/mediaserver",
         "/system/bin/netd",
@@ -110,10 +117,10 @@ public class Watchdog extends Thread {
     };
 
     public static final List<String> HAL_INTERFACES_OF_INTEREST = Arrays.asList(
-            "android.hardware.audio@2.0::IDevicesFactory",
             "android.hardware.audio@4.0::IDevicesFactory",
             "android.hardware.audio@5.0::IDevicesFactory",
             "android.hardware.audio@6.0::IDevicesFactory",
+            "android.hardware.audio@7.0::IDevicesFactory",
             "android.hardware.biometrics.face@1.0::IBiometricsFace",
             "android.hardware.biometrics.fingerprint@2.1::IBiometricsFingerprint",
             "android.hardware.bluetooth@1.0::IBluetoothHci",
@@ -135,6 +142,11 @@ public class Watchdog extends Thread {
             "android.system.suspend@1.0::ISystemSuspend"
     );
 
+    public static final String[] AIDL_INTERFACE_PREFIXES_OF_INTEREST = new String[] {
+            "android.hardware.light.ILights/",
+            "android.hardware.power.stats.IPowerStats/",
+    };
+
     private static Watchdog sWatchdog;
 
     /* This handler will be used to post message back onto the main thread */
@@ -144,7 +156,6 @@ public class Watchdog extends Thread {
 
     private IActivityController mController;
     private boolean mAllowRestart = true;
-    private final OpenFdMonitor mOpenFdMonitor;
     private final List<Integer> mInterestingJavaPids = new ArrayList<>();
 
     /**
@@ -350,8 +361,6 @@ public class Watchdog extends Thread {
         // Initialize monitor for Binder threads.
         addMonitor(new BinderThreadMonitor());
 
-        mOpenFdMonitor = OpenFdMonitor.create();
-
         mInterestingJavaPids.add(Process.myPid());
 
         // See the notes on DEFAULT_TIMEOUT.
@@ -518,12 +527,11 @@ public class Watchdog extends Thread {
         return builder.toString();
     }
 
-    private static ArrayList<Integer> getInterestingHalPids() {
+    private static void addInterestingHidlPids(HashSet<Integer> pids) {
         try {
             IServiceManager serviceManager = IServiceManager.getService();
             ArrayList<IServiceManager.InstanceDebugInfo> dump =
                     serviceManager.debugDump();
-            HashSet<Integer> pids = new HashSet<>();
             for (IServiceManager.InstanceDebugInfo info : dump) {
                 if (info.pid == IServiceManager.PidConstant.NO_PID) {
                     continue;
@@ -535,24 +543,37 @@ public class Watchdog extends Thread {
 
                 pids.add(info.pid);
             }
-            return new ArrayList<Integer>(pids);
         } catch (RemoteException e) {
-            return new ArrayList<Integer>();
+            Log.w(TAG, e);
+        }
+    }
+
+    private static void addInterestingAidlPids(HashSet<Integer> pids) {
+        ServiceDebugInfo[] infos = ServiceManager.getServiceDebugInfo();
+        if (infos == null) return;
+
+        for (ServiceDebugInfo info : infos) {
+            for (String prefix : AIDL_INTERFACE_PREFIXES_OF_INTEREST) {
+                if (info.name.startsWith(prefix)) {
+                    pids.add(info.debugPid);
+                }
+            }
         }
     }
 
     static ArrayList<Integer> getInterestingNativePids() {
-        ArrayList<Integer> pids = getInterestingHalPids();
+        HashSet<Integer> pids = new HashSet<>();
+        addInterestingAidlPids(pids);
+        addInterestingHidlPids(pids);
 
         int[] nativePids = Process.getPidsForCommands(NATIVE_STACKS_OF_INTEREST);
         if (nativePids != null) {
-            pids.ensureCapacity(pids.size() + nativePids.length);
             for (int i : nativePids) {
                 pids.add(i);
             }
         }
 
-        return pids;
+        return new ArrayList<Integer>(pids);
     }
 
     @Override
@@ -597,40 +618,30 @@ public class Watchdog extends Thread {
                     timeout = CHECK_INTERVAL - (SystemClock.uptimeMillis() - start);
                 }
 
-                boolean fdLimitTriggered = false;
-                if (mOpenFdMonitor != null) {
-                    fdLimitTriggered = mOpenFdMonitor.monitor();
-                }
-
-                if (!fdLimitTriggered) {
-                    final int waitState = evaluateCheckerCompletionLocked();
-                    if (waitState == COMPLETED) {
-                        // The monitors have returned; reset
-                        waitedHalf = false;
-                        continue;
-                    } else if (waitState == WAITING) {
-                        // still waiting but within their configured intervals; back off and recheck
-                        continue;
-                    } else if (waitState == WAITED_HALF) {
-                        if (!waitedHalf) {
-                            Slog.i(TAG, "WAITED_HALF");
-                            // We've waited half the deadlock-detection interval.  Pull a stack
-                            // trace and wait another half.
-                            ArrayList<Integer> pids = new ArrayList<>(mInterestingJavaPids);
-                            ActivityManagerService.dumpStackTraces(pids, null, null,
-                                    getInterestingNativePids(), null);
-                            waitedHalf = true;
-                        }
-                        continue;
+                final int waitState = evaluateCheckerCompletionLocked();
+                if (waitState == COMPLETED) {
+                    // The monitors have returned; reset
+                    waitedHalf = false;
+                    continue;
+                } else if (waitState == WAITING) {
+                    // still waiting but within their configured intervals; back off and recheck
+                    continue;
+                } else if (waitState == WAITED_HALF) {
+                    if (!waitedHalf) {
+                        Slog.i(TAG, "WAITED_HALF");
+                        // We've waited half the deadlock-detection interval.  Pull a stack
+                        // trace and wait another half.
+                        ArrayList<Integer> pids = new ArrayList<>(mInterestingJavaPids);
+                        ActivityManagerService.dumpStackTraces(pids, null, null,
+                                getInterestingNativePids(), null);
+                        waitedHalf = true;
                     }
-
-                    // something is overdue!
-                    blockedCheckers = getBlockedCheckersLocked();
-                    subject = describeCheckersLocked(blockedCheckers);
-                } else {
-                    blockedCheckers = Collections.emptyList();
-                    subject = "Open FD high water mark reached";
+                    continue;
                 }
+
+                // something is overdue!
+                blockedCheckers = getBlockedCheckersLocked();
+                subject = describeCheckersLocked(blockedCheckers);
                 allowRestart = mAllowRestart;
             }
 
@@ -716,6 +727,10 @@ public class Watchdog extends Thread {
                 Slog.w(TAG, "*** WATCHDOG KILLING SYSTEM PROCESS: " + subject);
                 WatchdogDiagnostics.diagnoseCheckers(blockedCheckers);
                 Slog.w(TAG, "*** GOODBYE!");
+                if (!Build.IS_USER && isCrashLoopFound()
+                        && !WatchdogProperties.should_ignore_fatal_count().orElse(false)) {
+                    breakCrashLoop();
+                }
                 Process.killProcess(Process.myPid());
                 System.exit(10);
             }
@@ -734,93 +749,114 @@ public class Watchdog extends Thread {
         }
     }
 
-    public static final class OpenFdMonitor {
-        /**
-         * Number of FDs below the soft limit that we trigger a runtime restart at. This was
-         * chosen arbitrarily, but will need to be at least 6 in order to have a sufficient number
-         * of FDs in reserve to complete a dump.
-         */
-        private static final int FD_HIGH_WATER_MARK = 12;
+    private void resetTimeoutHistory() {
+        writeTimeoutHistory(new ArrayList<String>());
+    }
 
-        private final File mDumpDir;
-        private final File mFdHighWaterMark;
+    private void writeTimeoutHistory(Iterable<String> crashHistory) {
+        String data = String.join(",", crashHistory);
 
+<<<<<<< HEAD
         public static OpenFdMonitor create() {
             // Only run the FD monitor on debuggable builds (such as userdebug and eng builds).
             if (!Build.IS_ENG) {
                 return null;
             }
+=======
+        try (FileWriter writer = new FileWriter(TIMEOUT_HISTORY_FILE)) {
+            writer.write(SystemProperties.get("ro.boottime.zygote"));
+            writer.write(":");
+            writer.write(data);
+        } catch (IOException e) {
+            Slog.e(TAG, "Failed to write file " + TIMEOUT_HISTORY_FILE, e);
+        }
+    }
+>>>>>>> 1a7b0835ced351de3f8f73b29a3b40996d335e65
 
-            final StructRlimit rlimit;
-            try {
-                rlimit = android.system.Os.getrlimit(OsConstants.RLIMIT_NOFILE);
-            } catch (ErrnoException errno) {
-                Slog.w(TAG, "Error thrown from getrlimit(RLIMIT_NOFILE)", errno);
-                return null;
+    private String[] readTimeoutHistory() {
+        final String[] emptyStringArray = {};
+
+        try (BufferedReader reader = new BufferedReader(new FileReader(TIMEOUT_HISTORY_FILE))) {
+            String line = reader.readLine();
+            if (line == null) {
+                return emptyStringArray;
             }
 
-            // The assumption we're making here is that FD numbers are allocated (more or less)
-            // sequentially, which is currently (and historically) true since open is currently
-            // specified to always return the lowest-numbered non-open file descriptor for the
-            // current process.
-            //
-            // We do this to avoid having to enumerate the contents of /proc/self/fd in order to
-            // count the number of descriptors open in the process.
-            final File fdThreshold = new File("/proc/self/fd/" + (rlimit.rlim_cur - FD_HIGH_WATER_MARK));
-            return new OpenFdMonitor(new File("/data/anr"), fdThreshold);
-        }
-
-        OpenFdMonitor(File dumpDir, File fdThreshold) {
-            mDumpDir = dumpDir;
-            mFdHighWaterMark = fdThreshold;
-        }
-
-        /**
-         * Dumps open file descriptors and their full paths to a temporary file in {@code mDumpDir}.
-         */
-        private void dumpOpenDescriptors() {
-            // We cannot exec lsof to get more info about open file descriptors because a newly
-            // forked process will not have the permissions to readlink. Instead list all open
-            // descriptors from /proc/pid/fd and resolve them.
-            List<String> dumpInfo = new ArrayList<>();
-            String fdDirPath = String.format("/proc/%d/fd/", Process.myPid());
-            File[] fds = new File(fdDirPath).listFiles();
-            if (fds == null) {
-                dumpInfo.add("Unable to list " + fdDirPath);
+            String[] data = line.trim().split(":");
+            String boottime = data.length >= 1 ? data[0] : "";
+            String history = data.length >= 2 ? data[1] : "";
+            if (SystemProperties.get("ro.boottime.zygote").equals(boottime) && !history.isEmpty()) {
+                return history.split(",");
             } else {
-                for (File f : fds) {
-                    String fdSymLink = f.getAbsolutePath();
-                    String resolvedPath = "";
-                    try {
-                        resolvedPath = Os.readlink(fdSymLink);
-                    } catch (ErrnoException ex) {
-                        resolvedPath = ex.getMessage();
-                    }
-                    dumpInfo.add(fdSymLink + "\t" + resolvedPath);
-                }
+                return emptyStringArray;
             }
-
-            // Dump the fds & paths to a temp file.
-            try {
-                File dumpFile = File.createTempFile("anr_fd_", "", mDumpDir);
-                Path out = Paths.get(dumpFile.getAbsolutePath());
-                Files.write(out, dumpInfo, StandardCharsets.UTF_8);
-            } catch (IOException ex) {
-                Slog.w(TAG, "Unable to write open descriptors to file: " + ex);
-            }
+        } catch (FileNotFoundException e) {
+            return emptyStringArray;
+        } catch (IOException e) {
+            Slog.e(TAG, "Failed to read file " + TIMEOUT_HISTORY_FILE, e);
+            return emptyStringArray;
         }
+    }
 
-        /**
-         * @return {@code true} if the high water mark was breached and a dump was written,
-         *     {@code false} otherwise.
-         */
-        public boolean monitor() {
-            if (mFdHighWaterMark.exists()) {
-                dumpOpenDescriptors();
+    private boolean hasActiveUsbConnection() {
+        try {
+            final String state = FileUtils.readTextFile(
+                    new File("/sys/class/android_usb/android0/state"),
+                    128 /*max*/, null /*ellipsis*/).trim();
+            if ("CONFIGURED".equals(state)) {
                 return true;
             }
+        } catch (IOException e) {
+            Slog.w(TAG, "Failed to determine if device was on USB", e);
+        }
+        return false;
+    }
 
+    private boolean isCrashLoopFound() {
+        int fatalCount = WatchdogProperties.fatal_count().orElse(0);
+        long fatalWindowMs = TimeUnit.SECONDS.toMillis(
+                WatchdogProperties.fatal_window_seconds().orElse(0));
+        if (fatalCount == 0 || fatalWindowMs == 0) {
+            if (fatalCount != fatalWindowMs) {
+                Slog.w(TAG, String.format("sysprops '%s' and '%s' should be set or unset together",
+                            PROP_FATAL_LOOP_COUNT, PROP_FATAL_LOOP_WINDOWS_SECS));
+            }
             return false;
         }
+
+        // new-history = [last (fatalCount - 1) items in old-history] + [nowMs].
+        long nowMs = SystemClock.elapsedRealtime(); // Time since boot including deep sleep.
+        String[] rawCrashHistory = readTimeoutHistory();
+        ArrayList<String> crashHistory = new ArrayList<String>(Arrays.asList(Arrays.copyOfRange(
+                        rawCrashHistory,
+                        Math.max(0, rawCrashHistory.length - fatalCount - 1),
+                        rawCrashHistory.length)));
+        // Something wrong here.
+        crashHistory.add(String.valueOf(nowMs));
+        writeTimeoutHistory(crashHistory);
+
+        // Returns false if the device has an active USB connection.
+        if (hasActiveUsbConnection()) {
+            return false;
+        }
+
+        long firstCrashMs;
+        try {
+            firstCrashMs = Long.parseLong(crashHistory.get(0));
+        } catch (NumberFormatException t) {
+            Slog.w(TAG, "Failed to parseLong " + crashHistory.get(0), t);
+            resetTimeoutHistory();
+            return false;
+        }
+        return crashHistory.size() >= fatalCount && nowMs - firstCrashMs < fatalWindowMs;
+    }
+
+    private void breakCrashLoop() {
+        try (FileWriter kmsg = new FileWriter("/dev/kmsg_debug", /* append= */ true)) {
+            kmsg.append("Fatal reset to escape the system_server crashing loop\n");
+        } catch (IOException e) {
+            Slog.w(TAG, "Failed to append to kmsg", e);
+        }
+        doSysRq('c');
     }
 }

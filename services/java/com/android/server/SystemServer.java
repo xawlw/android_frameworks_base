@@ -49,6 +49,7 @@ import android.database.sqlite.SQLiteCompatibilityWalFlags;
 import android.database.sqlite.SQLiteGlobal;
 import android.graphics.GraphicsStatsService;
 import android.hardware.display.DisplayManagerInternal;
+import android.net.ConnectivityManager;
 import android.net.ConnectivityModuleConnector;
 import android.net.NetworkStackClient;
 import android.os.BaseBundle;
@@ -84,6 +85,7 @@ import android.util.Pair;
 import android.util.Slog;
 import android.view.contentcapture.ContentCaptureManager;
 
+import com.android.i18n.timezone.ZoneInfoDb;
 import com.android.internal.R;
 import com.android.internal.notification.SystemNotificationChannels;
 import com.android.internal.os.BinderInternal;
@@ -94,6 +96,7 @@ import com.android.internal.util.FrameworkStatsLog;
 import com.android.internal.widget.ILockSettings;
 import com.android.server.am.ActivityManagerService;
 import com.android.server.appbinding.AppBindingService;
+import com.android.server.art.ArtManagerLocal;
 import com.android.server.attention.AttentionManagerService;
 import com.android.server.audio.AudioService;
 import com.android.server.biometrics.AuthService;
@@ -106,7 +109,7 @@ import com.android.server.camera.CameraServiceProxy;
 import com.android.server.clipboard.ClipboardService;
 import com.android.server.compat.PlatformCompat;
 import com.android.server.compat.PlatformCompatNative;
-import com.android.server.connectivity.IpConnectivityMetrics;
+import com.android.server.connectivity.PacProxyService;
 import com.android.server.contentcapture.ContentCaptureManagerInternal;
 import com.android.server.coverage.CoverageService;
 import com.android.server.devicepolicy.DevicePolicyManagerService;
@@ -138,6 +141,7 @@ import com.android.server.oemlock.OemLockService;
 import com.android.server.om.OverlayManagerService;
 import com.android.server.os.BugreportManagerService;
 import com.android.server.os.DeviceIdentifiersPolicyService;
+import com.android.server.os.NativeTombstoneManagerService;
 import com.android.server.os.SchedulingPolicyService;
 import com.android.server.people.PeopleService;
 import com.android.server.pocket.PocketService;
@@ -159,6 +163,7 @@ import com.android.server.policy.role.LegacyRoleResolutionPolicy;
 import com.android.server.power.PowerManagerService;
 import com.android.server.power.ShutdownThread;
 import com.android.server.power.ThermalManagerService;
+import com.android.server.profcollect.ProfcollectForwardingService;
 import com.android.server.recoverysystem.RecoverySystemService;
 import com.android.server.restrictions.RestrictionsManagerService;
 import com.android.server.role.RoleManagerService;
@@ -175,6 +180,7 @@ import com.android.server.telecom.TelecomLoaderService;
 import com.android.server.testharness.TestHarnessModeService;
 import com.android.server.textclassifier.TextClassificationManagerService;
 import com.android.server.textservices.TextServicesManagerService;
+import com.android.server.tracing.TracingServiceProxy;
 import com.android.server.trust.TrustManagerService;
 import com.android.server.tv.TvInputManagerService;
 import com.android.server.tv.TvRemoteService;
@@ -216,12 +222,6 @@ public final class SystemServer {
     private static final String ENCRYPTING_STATE = "trigger_restart_min_framework";
     private static final String ENCRYPTED_STATE = "1";
 
-    private static final long SNAPSHOT_INTERVAL = 60 * 60 * 1000; // 1hr
-
-    // The earliest supported time.  We pick one day into 1970, to
-    // give any timezone code room without going into negative time.
-    private static final long EARLIEST_SUPPORTED_TIME = 86400 * 1000;
-
     private static final long SLOW_DISPATCH_THRESHOLD_MS = 100;
     private static final long SLOW_DELIVERY_THRESHOLD_MS = 200;
 
@@ -235,12 +235,16 @@ public final class SystemServer {
             "com.android.server.appwidget.AppWidgetService";
     private static final String VOICE_RECOGNITION_MANAGER_SERVICE_CLASS =
             "com.android.server.voiceinteraction.VoiceInteractionManagerService";
+    private static final String APP_HIBERNATION_SERVICE_CLASS =
+            "com.android.server.apphibernation.AppHibernationService";
     private static final String PRINT_MANAGER_SERVICE_CLASS =
             "com.android.server.print.PrintManagerService";
     private static final String COMPANION_DEVICE_MANAGER_SERVICE_CLASS =
             "com.android.server.companion.CompanionDeviceManagerService";
     private static final String STATS_COMPANION_APEX_PATH =
             "/apex/com.android.os.statsd/javalib/service-statsd.jar";
+    private static final String CONNECTIVITY_SERVICE_APEX_PATH =
+            "/apex/com.android.tethering/javalib/service-connectivity.jar";
     private static final String STATS_COMPANION_LIFECYCLE_CLASS =
             "com.android.server.stats.StatsCompanion$Lifecycle";
     private static final String STATS_PULL_ATOM_SERVICE_CLASS =
@@ -329,6 +333,10 @@ public final class SystemServer {
             "com.android.server.blob.BlobStoreManagerService";
     private static final String ROLLBACK_MANAGER_SERVICE_CLASS =
             "com.android.server.rollback.RollbackManagerService";
+    private static final String CONNECTIVITY_SERVICE_INITIALIZER_CLASS =
+            "com.android.server.ConnectivityServiceInitializer";
+    private static final String IP_CONNECTIVITY_METRICS_CLASS =
+            "com.android.server.connectivity.IpConnectivityMetrics";
 
     private static final String TETHERING_CONNECTOR_CLASS = "android.net.ITetheringConnector";
 
@@ -336,8 +344,6 @@ public final class SystemServer {
 
     private static final String UNCRYPT_PACKAGE_FILE = "/cache/recovery/uncrypt_file";
     private static final String BLOCK_MAP_FILE = "/cache/recovery/block.map";
-
-    private static final String GSI_RUNNING_PROP = "ro.gsid.image_running";
 
     // maximum number of binder threads used for system_server
     // will be higher than the system default
@@ -403,6 +409,11 @@ public final class SystemServer {
     private static native void startSensorService();
 
     /**
+     * Start the memtrack proxy service.
+     */
+    private static native void startMemtrackProxyService();
+
+    /**
      * Start all HIDL services that are run inside the system server. This may take some time.
      */
     private static native void startHidlServices();
@@ -457,6 +468,10 @@ public final class SystemServer {
                 if (maxFd > enableThreshold) {
                     // Do a manual GC to clean up fds that are hanging around as garbage.
                     System.gc();
+<<<<<<< HEAD
+=======
+                    System.runFinalization();
+>>>>>>> 1a7b0835ced351de3f8f73b29a3b40996d335e65
                     maxFd = getMaxFd();
                 }
 
@@ -531,8 +546,9 @@ public final class SystemServer {
             // Default the timezone property to GMT if not set.
             //
             String timezoneProperty = SystemProperties.get("persist.sys.timezone");
-            if (timezoneProperty == null || timezoneProperty.isEmpty()) {
-                Slog.w(TAG, "Timezone not set; setting to GMT.");
+            if (!isValidTimeZoneId(timezoneProperty)) {
+                Slog.w(TAG, "persist.sys.timezone is not valid (" + timezoneProperty
+                        + "); setting to GMT.");
                 SystemProperties.set("persist.sys.timezone", "GMT");
             }
 
@@ -699,15 +715,15 @@ public final class SystemServer {
             }
         }
 
-        // Diagnostic to ensure that the system is in a base healthy state. Done here as a common
-        // non-zygote process.
-        if (!VMRuntime.hasBootImageSpaces()) {
-            Slog.wtf(TAG, "Runtime is not running with a boot image!");
-        }
-
         // Loop forever.
         Looper.loop();
         throw new RuntimeException("Main thread loop unexpectedly exited");
+    }
+
+    private static boolean isValidTimeZoneId(String timezoneProperty) {
+        return timezoneProperty != null
+                && !timezoneProperty.isEmpty()
+                && ZoneInfoDb.getInstance().hasTimeZone(timezoneProperty);
     }
 
     private boolean isFirstBootOrUpgrade() {
@@ -837,6 +853,12 @@ public final class SystemServer {
         // Uri Grants Manager.
         t.traceBegin("UriGrantsManagerService");
         mSystemServiceManager.startService(UriGrantsManagerService.Lifecycle.class);
+        t.traceEnd();
+
+        // Start MemtrackProxyService before ActivityManager, so that early calls
+        // to Memtrack::getMemory() don't fail.
+        t.traceBegin("MemtrackProxyService");
+        startMemtrackProxyService();
         t.traceEnd();
 
         // Activity manager runs the show.
@@ -989,6 +1011,9 @@ public final class SystemServer {
         mActivityManagerService.setSystemProcess();
         t.traceEnd();
 
+        // The package receiver depends on the activity service in order to get registered.
+        platformCompat.registerPackageReceiver(mSystemContext);
+
         // Complete the watchdog setup with an ActivityManager instance and listen for reboots
         // Do this only after the ActivityManagerService is properly started as a system process
         t.traceBegin("InitWatchdog");
@@ -1078,6 +1103,11 @@ public final class SystemServer {
         mSystemServiceManager.startService(ROLLBACK_MANAGER_SERVICE_CLASS);
         t.traceEnd();
 
+        // Tracks native tombstones.
+        t.traceBegin("StartNativeTombstoneManagerService");
+        mSystemServiceManager.startService(NativeTombstoneManagerService.class);
+        t.traceEnd();
+
         // Service to capture bugreports.
         t.traceBegin("StartBugreportManagerService");
         mSystemServiceManager.startService(BugreportManagerService.class);
@@ -1103,9 +1133,10 @@ public final class SystemServer {
         IStorageManager storageManager = null;
         NetworkManagementService networkManagement = null;
         IpSecService ipSecService = null;
+        VpnManagerService vpnManager = null;
+        VcnManagementService vcnManagement = null;
         NetworkStatsService networkStats = null;
         NetworkPolicyManagerService networkPolicy = null;
-        ConnectivityService connectivity = null;
         NsdService serviceDiscovery = null;
         WindowManagerService wm = null;
         SerialService serial = null;
@@ -1115,6 +1146,7 @@ public final class SystemServer {
         ConsumerIrService consumerIr = null;
         MmsServiceBroker mmsService = null;
         HardwarePropertiesManagerService hardwarePropertiesService = null;
+        PacProxyService pacProxyService = null;
 
         boolean disableSystemTextClassifier = SystemProperties.getBoolean(
                 "config.disable_systemtextclassifier", false);
@@ -1125,7 +1157,7 @@ public final class SystemServer {
                 false);
         boolean enableLeftyService = SystemProperties.getBoolean("config.enable_lefty", false);
 
-        boolean isEmulator = SystemProperties.get("ro.kernel.qemu").equals("1");
+        boolean isEmulator = SystemProperties.get("ro.boot.qemu").equals("1");
 
         boolean isWatch = context.getPackageManager().hasSystemFeature(
                 PackageManager.FEATURE_WATCH);
@@ -1295,7 +1327,7 @@ public final class SystemServer {
             }
 
             t.traceBegin("IpConnectivityMetrics");
-            mSystemServiceManager.startService(IpConnectivityMetrics.class);
+            mSystemServiceManager.startService(IP_CONNECTIVITY_METRICS_CLASS);
             t.traceEnd();
 
             t.traceBegin("NetworkWatchlistService");
@@ -1310,6 +1342,7 @@ public final class SystemServer {
             mSystemServiceManager.startService(IorapForwardingService.class);
             t.traceEnd();
 
+<<<<<<< HEAD
             t.traceBegin("StartAppLockService");
             mSystemServiceManager.startService(AppLockService.class);
             t.traceEnd();
@@ -1320,6 +1353,12 @@ public final class SystemServer {
                 t.traceEnd();
             } else {
                 Slog.i(TAG, "DC Dimming not supported");
+=======
+            if (Build.IS_DEBUGGABLE && ProfcollectForwardingService.enabled()) {
+                t.traceBegin("ProfcollectForwardingService");
+                mSystemServiceManager.startService(ProfcollectForwardingService.class);
+                t.traceEnd();
+>>>>>>> 1a7b0835ced351de3f8f73b29a3b40996d335e65
             }
 
             t.traceBegin("SignedConfigService");
@@ -1456,8 +1495,7 @@ public final class SystemServer {
             t.traceEnd();
 
             final boolean hasPdb = !SystemProperties.get(PERSISTENT_DATA_BLOCK_PROP).equals("");
-            final boolean hasGsi = SystemProperties.getInt(GSI_RUNNING_PROP, 0) > 0;
-            if (hasPdb && !hasGsi) {
+            if (hasPdb) {
                 t.traceBegin("StartPersistentDataBlock");
                 mSystemServiceManager.startService(PersistentDataBlockService.class);
                 t.traceEnd();
@@ -1546,7 +1584,7 @@ public final class SystemServer {
 
             t.traceBegin("StartIpSecService");
             try {
-                ipSecService = IpSecService.create(context, networkManagement);
+                ipSecService = IpSecService.create(context);
                 ServiceManager.addService(Context.IPSEC_SERVICE, ipSecService);
             } catch (Throwable e) {
                 reportWtf("starting IpSec Service", e);
@@ -1638,16 +1676,39 @@ public final class SystemServer {
                 t.traceEnd();
             }
 
-            t.traceBegin("StartConnectivityService");
+            t.traceBegin("StartPacProxyService");
             try {
-                connectivity = new ConnectivityService(
-                        context, networkManagement, networkStats, networkPolicy);
-                ServiceManager.addService(Context.CONNECTIVITY_SERVICE, connectivity,
-                        /* allowIsolated= */ false,
-                        DUMP_FLAG_PRIORITY_HIGH | DUMP_FLAG_PRIORITY_NORMAL);
-                networkPolicy.bindConnectivityManager(connectivity);
+                pacProxyService = new PacProxyService(context);
+                ServiceManager.addService(Context.PAC_PROXY_SERVICE, pacProxyService);
             } catch (Throwable e) {
-                reportWtf("starting Connectivity Service", e);
+                reportWtf("starting PacProxyService", e);
+            }
+            t.traceEnd();
+
+            t.traceBegin("StartConnectivityService");
+            // This has to be called after NetworkManagementService, NetworkStatsService
+            // and NetworkPolicyManager because ConnectivityService needs to take these
+            // services to initialize.
+            mSystemServiceManager.startServiceFromJar(CONNECTIVITY_SERVICE_INITIALIZER_CLASS,
+                    CONNECTIVITY_SERVICE_APEX_PATH);
+            networkPolicy.bindConnectivityManager();
+            t.traceEnd();
+
+            t.traceBegin("StartVpnManagerService");
+            try {
+                vpnManager = VpnManagerService.create(context);
+                ServiceManager.addService(Context.VPN_MANAGEMENT_SERVICE, vpnManager);
+            } catch (Throwable e) {
+                reportWtf("starting VPN Manager Service", e);
+            }
+            t.traceEnd();
+
+            t.traceBegin("StartVcnManagementService");
+            try {
+                vcnManagement = VcnManagementService.create(context);
+                ServiceManager.addService(Context.VCN_MANAGEMENT_SERVICE, vcnManagement);
+            } catch (Throwable e) {
+                reportWtf("starting VCN Management Service", e);
             }
             t.traceEnd();
 
@@ -1876,6 +1937,10 @@ public final class SystemServer {
             // based on that feature.
             t.traceBegin("StartVoiceRecognitionManager");
             mSystemServiceManager.startService(VOICE_RECOGNITION_MANAGER_SERVICE_CLASS);
+            t.traceEnd();
+
+            t.traceBegin("StartAppHibernationService");
+            mSystemServiceManager.startService(APP_HIBERNATION_SERVICE_CLASS);
             t.traceEnd();
 
             if (GestureLauncherService.isGestureLauncherEnabled(context.getResources())) {
@@ -2236,6 +2301,11 @@ public final class SystemServer {
         mSystemServiceManager.startService(AppBindingService.Lifecycle.class);
         t.traceEnd();
 
+        // Perfetto TracingServiceProxy
+        t.traceBegin("startTracingServiceProxy");
+        mSystemServiceManager.startService(TracingServiceProxy.class);
+        t.traceEnd();
+
         // It is now time to start up the app processes...
 
         t.traceBegin("MakeVibratorServiceReady");
@@ -2343,6 +2413,10 @@ public final class SystemServer {
         }
         t.traceEnd();
 
+        t.traceBegin("ArtManagerLocal");
+        LocalManagerRegistry.addManager(ArtManagerLocal.class, new ArtManagerLocal());
+        t.traceEnd();
+
         t.traceBegin("StartBootPhaseDeviceSpecificServicesReady");
         mSystemServiceManager.startBootPhase(t, SystemService.PHASE_DEVICE_SPECIFIC_SERVICES_READY);
         t.traceEnd();
@@ -2354,7 +2428,6 @@ public final class SystemServer {
         final NetworkManagementService networkManagementF = networkManagement;
         final NetworkStatsService networkStatsF = networkStats;
         final NetworkPolicyManagerService networkPolicyF = networkPolicy;
-        final ConnectivityService connectivityF = connectivity;
         final CountryDetectorService countryDetectorF = countryDetector;
         final NetworkTimeUpdateService networkTimeUpdaterF = networkTimeUpdater;
         final InputManagerService inputManagerF = inputManager;
@@ -2362,7 +2435,11 @@ public final class SystemServer {
         final MediaRouterService mediaRouterF = mediaRouter;
         final MmsServiceBroker mmsServiceF = mmsService;
         final IpSecService ipSecServiceF = ipSecService;
+        final VpnManagerService vpnManagerF = vpnManager;
+        final VcnManagementService vcnManagementF = vcnManagement;
         final WindowManagerService windowManagerF = wm;
+        final ConnectivityManager connectivityF = (ConnectivityManager)
+                context.getSystemService(Context.CONNECTIVITY_SERVICE);
 
         // We now tell the activity manager it is okay to run third party
         // code.  It will call back into us once it has gotten to the state
@@ -2464,6 +2541,24 @@ public final class SystemServer {
                 }
             } catch (Throwable e) {
                 reportWtf("making Connectivity Service ready", e);
+            }
+            t.traceEnd();
+            t.traceBegin("MakeVpnManagerServiceReady");
+            try {
+                if (vpnManagerF != null) {
+                    vpnManagerF.systemReady();
+                }
+            } catch (Throwable e) {
+                reportWtf("making VpnManagerService ready", e);
+            }
+            t.traceEnd();
+            t.traceBegin("MakeVcnManagementServiceReady");
+            try {
+                if (vcnManagementF != null) {
+                    vcnManagementF.systemReady();
+                }
+            } catch (Throwable e) {
+                reportWtf("making VcnManagementService ready", e);
             }
             t.traceEnd();
             t.traceBegin("MakeNetworkPolicyServiceReady");

@@ -25,7 +25,6 @@
 
 #include "ServiceWrappers.h"
 #include "jni.h"
-#include "nativehelper/JNIHelp.h"
 #include "path.h"
 
 using namespace std::literals;
@@ -89,7 +88,6 @@ BinderIncrementalService* BinderIncrementalService::start(JNIEnv* env) {
     }
     sp<ProcessState> ps(ProcessState::self());
     ps->startThreadPool();
-    ps->giveThreadPoolName();
     // sm->addService increments the reference count, and now we're OK with returning the pointer.
     return self.get();
 }

@@ -36,6 +36,7 @@ import android.graphics.Rect;
 import android.graphics.Region.Op;
 import android.graphics.Typeface;
 import android.graphics.drawable.Drawable;
+import android.os.Build;
 import android.os.Build.VERSION_CODES;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
@@ -113,7 +114,7 @@ public class Switch extends CompoundButton {
     private boolean mHasTrackTintMode = false;
 
     private int mThumbTextPadding;
-    @UnsupportedAppUsage
+    @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
     private int mSwitchMinWidth;
     private int mSwitchPadding;
     private boolean mSplitTrack;

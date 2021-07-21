@@ -37,6 +37,7 @@ import android.content.Intent;
 import android.content.IntentSender;
 import android.content.pm.PackageManager.DeleteFlags;
 import android.content.pm.PackageManager.InstallReason;
+import android.content.pm.PackageManager.InstallScenario;
 import android.graphics.Bitmap;
 import android.net.Uri;
 import android.os.Build;
@@ -697,7 +698,7 @@ public class PackageInstaller {
      * installer was created.
      *
      * <p>This will
-     * {@link PackageInstaller.SessionParams#setWhitelistedRestrictedPermissions(Set) whitelist
+     * {@link PackageInstaller.SessionParams#setWhitelistedRestrictedPermissions(Set) allowlist
      * all restricted permissions}.
      *
      * @param packageName The package to install.
@@ -1465,14 +1466,22 @@ public class PackageInstaller {
         public int installLocation = PackageInfo.INSTALL_LOCATION_INTERNAL_ONLY;
         /** {@hide} */
         public @InstallReason int installReason = PackageManager.INSTALL_REASON_UNKNOWN;
+        /**
+         * {@hide}
+         *
+         * This flag indicates which installation scenario best describes this session.  The system
+         * may use this value when making decisions about how to handle the installation, such as
+         * prioritizing system health or user experience.
+         */
+        public @InstallScenario int installScenario = PackageManager.INSTALL_SCENARIO_DEFAULT;
         /** {@hide} */
-        @UnsupportedAppUsage
+        @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
         public long sizeBytes = -1;
         /** {@hide} */
         @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.P, trackingBug = 115609023)
         public String appPackageName;
         /** {@hide} */
-        @UnsupportedAppUsage
+        @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
         public Bitmap appIcon;
         /** {@hide} */
         @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.P, trackingBug = 115609023)
@@ -1482,7 +1491,7 @@ public class PackageInstaller {
         /** {@hide} */
         public Uri originatingUri;
         /** {@hide} */
-        @UnsupportedAppUsage
+        @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
         public int originatingUid = UID_UNKNOWN;
         /** {@hide} */
         public Uri referrerUri;
@@ -1528,6 +1537,7 @@ public class PackageInstaller {
             installFlags = source.readInt();
             installLocation = source.readInt();
             installReason = source.readInt();
+            installScenario = source.readInt();
             sizeBytes = source.readLong();
             appPackageName = source.readString();
             appIcon = source.readParcelable(null);
@@ -1559,6 +1569,7 @@ public class PackageInstaller {
             ret.installFlags = installFlags;
             ret.installLocation = installLocation;
             ret.installReason = installReason;
+            ret.installScenario = installScenario;
             ret.sizeBytes = sizeBytes;
             ret.appPackageName = appPackageName;
             ret.appIcon = appIcon;  // not a copy.
@@ -1691,7 +1702,6 @@ public class PackageInstaller {
          *
          * @hide
          */
-        @TestApi
         @SystemApi
         @RequiresPermission(android.Manifest.permission.INSTALL_GRANT_RUNTIME_PERMISSIONS)
         public void setGrantedRuntimePermissions(String[] permissions) {
@@ -1700,25 +1710,25 @@ public class PackageInstaller {
         }
 
         /**
-         * Sets which restricted permissions to be whitelisted for the app. Whitelisting
+         * Sets which restricted permissions to be allowlisted for the app. Allowlisting
          * is not granting the permissions, rather it allows the app to hold permissions
-         * which are otherwise restricted. Whitelisting a non restricted permission has
+         * which are otherwise restricted. Allowlisting a non restricted permission has
          * no effect.
          *
          * <p> Permissions can be hard restricted which means that the app cannot hold
          * them or soft restricted where the app can hold the permission but in a weaker
          * form. Whether a permission is {@link PermissionInfo#FLAG_HARD_RESTRICTED hard
          * restricted} or {@link PermissionInfo#FLAG_SOFT_RESTRICTED soft restricted}
-         * depends on the permission declaration. Whitelisting a hard restricted permission
-         * allows the app to hold that permission and whitelisting a soft restricted
+         * depends on the permission declaration. Allowlisting a hard restricted permission
+         * allows the app to hold that permission and allowlisting a soft restricted
          * permission allows the app to hold the permission in its full, unrestricted form.
          *
-         * <p> Permissions can also be immutably restricted which means that the whitelist
+         * <p> Permissions can also be immutably restricted which means that the allowlist
          * state of the permission can be determined only at install time and cannot be
          * changed on updated or at a later point via the package manager APIs.
          *
-         * <p>Initially, all restricted permissions are whitelisted but you can change
-         * which ones are whitelisted by calling this method or the corresponding ones
+         * <p>Initially, all restricted permissions are allowlisted but you can change
+         * which ones are allowlisted by calling this method or the corresponding ones
          * on the {@link PackageManager}. Only soft or hard restricted permissions on the current
          * Android version are supported and any invalid entries will be removed.
          *
@@ -1763,7 +1773,7 @@ public class PackageInstaller {
          * @see SessionParams#setEnableRollback(boolean, int)
          * @hide
          */
-        @SystemApi @TestApi
+        @SystemApi
         public void setEnableRollback(boolean enable) {
             if (enable) {
                 installFlags |= PackageManager.INSTALL_ENABLE_ROLLBACK;
@@ -1787,7 +1797,7 @@ public class PackageInstaller {
          * @param dataPolicy the rollback data policy for this session
          * @hide
          */
-        @SystemApi @TestApi
+        @SystemApi
         public void setEnableRollback(boolean enable,
                 @PackageManager.RollbackDataPolicy int dataPolicy) {
             if (enable) {
@@ -1810,7 +1820,7 @@ public class PackageInstaller {
         }
 
         /** {@hide} */
-        @SystemApi @TestApi
+        @SystemApi
         public void setRequestDowngrade(boolean requestDowngrade) {
             if (requestDowngrade) {
                 installFlags |= PackageManager.INSTALL_REQUEST_DOWNGRADE;
@@ -1933,7 +1943,7 @@ public class PackageInstaller {
          *
          * {@hide}
          */
-        @SystemApi @TestApi
+        @SystemApi
         @RequiresPermission(Manifest.permission.INSTALL_PACKAGES)
         public void setStaged() {
             this.isStaged = true;
@@ -1944,7 +1954,7 @@ public class PackageInstaller {
          *
          * {@hide}
          */
-        @SystemApi @TestApi
+        @SystemApi
         @RequiresPermission(Manifest.permission.INSTALL_PACKAGES)
         public void setInstallAsApex() {
             installFlags |= PackageManager.INSTALL_APEX;
@@ -1980,11 +1990,20 @@ public class PackageInstaller {
             this.forceQueryableOverride = true;
         }
 
+        /**
+         * Sets the install scenario for this session, which describes the expected user journey.
+         */
+        public void setInstallScenario(@InstallScenario int installScenario) {
+            this.installScenario = installScenario;
+        }
+
         /** {@hide} */
         public void dump(IndentingPrintWriter pw) {
             pw.printPair("mode", mode);
             pw.printHexPair("installFlags", installFlags);
             pw.printPair("installLocation", installLocation);
+            pw.printPair("installReason", installReason);
+            pw.printPair("installScenario", installScenario);
             pw.printPair("sizeBytes", sizeBytes);
             pw.printPair("appPackageName", appPackageName);
             pw.printPair("appIcon", (appIcon != null));
@@ -2018,6 +2037,7 @@ public class PackageInstaller {
             dest.writeInt(installFlags);
             dest.writeInt(installLocation);
             dest.writeInt(installReason);
+            dest.writeInt(installScenario);
             dest.writeLong(sizeBytes);
             dest.writeString(appPackageName);
             dest.writeParcelable(appIcon, flags);
@@ -2109,13 +2129,13 @@ public class PackageInstaller {
         @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.P, trackingBug = 115609023)
         public String installerPackageName;
         /** {@hide} */
-        @UnsupportedAppUsage
+        @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
         public String resolvedBaseCodePath;
         /** {@hide} */
         @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.P, trackingBug = 115609023)
         public float progress;
         /** {@hide} */
-        @UnsupportedAppUsage
+        @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
         public boolean sealed;
         /** {@hide} */
         @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.P, trackingBug = 115609023)
@@ -2126,6 +2146,8 @@ public class PackageInstaller {
         public int mode;
         /** {@hide} */
         public @InstallReason int installReason;
+        /** {@hide} */
+        public @InstallReason int installScenario;
         /** {@hide} */
         @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.P, trackingBug = 115609023)
         public long sizeBytes;
@@ -2188,7 +2210,7 @@ public class PackageInstaller {
         public int rollbackDataPolicy;
 
         /** {@hide} */
-        @UnsupportedAppUsage
+        @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
         public SessionInfo() {
         }
 
@@ -2204,6 +2226,7 @@ public class PackageInstaller {
 
             mode = source.readInt();
             installReason = source.readInt();
+            installScenario = source.readInt();
             sizeBytes = source.readLong();
             appPackageName = source.readString();
             appIcon = source.readParcelable(null);
@@ -2425,12 +2448,11 @@ public class PackageInstaller {
 
         /**
          * Get the value set in {@link SessionParams#setWhitelistedRestrictedPermissions(Set)}.
-         * Note that if all permissions are whitelisted this method returns {@link
+         * Note that if all permissions are allowlisted this method returns {@link
          * SessionParams#RESTRICTED_PERMISSIONS_ALL}.
          *
          * @hide
          */
-        @TestApi
         @SystemApi
         public @NonNull Set<String> getWhitelistedRestrictedPermissions() {
             if ((installFlags & PackageManager.INSTALL_ALL_WHITELIST_RESTRICTED_PERMISSIONS) != 0) {
@@ -2454,7 +2476,6 @@ public class PackageInstaller {
          *
          * @hide
          */
-        @TestApi
         @SystemApi
         public int getAutoRevokePermissionsMode() {
             return autoRevokePermissionsMode;
@@ -2575,7 +2596,7 @@ public class PackageInstaller {
          *
          * @hide
          */
-        @SystemApi @TestApi
+        @SystemApi
         @PackageManager.RollbackDataPolicy
         public int getRollbackDataPolicy() {
             return rollbackDataPolicy;
@@ -2736,6 +2757,7 @@ public class PackageInstaller {
 
             dest.writeInt(mode);
             dest.writeInt(installReason);
+            dest.writeInt(installScenario);
             dest.writeLong(sizeBytes);
             dest.writeString(appPackageName);
             dest.writeParcelable(appIcon, flags);

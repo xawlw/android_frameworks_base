@@ -210,7 +210,7 @@
     <string name="enable_adb_wireless_summary" msgid="7344391423657093011">"連上 Wi-Fi 時啟用偵錯模式"</string>
     <string name="adb_wireless_error" msgid="721958772149779856">"錯誤"</string>
     <string name="adb_wireless_settings" msgid="2295017847215680229">"無線偵錯"</string>
-    <string name="adb_wireless_list_empty_off" msgid="1713707973837255490">"如要查看並使用可用的裝置，請開啟無線偵錯"</string>
+    <string name="adb_wireless_list_empty_off" msgid="1713707973837255490">"如要查看並使用可用的裝置，請開啟無線偵錯功能"</string>
     <string name="adb_pair_method_qrcode_title" msgid="6982904096137468634">"使用 QR 圖碼配對裝置"</string>
     <string name="adb_pair_method_qrcode_summary" msgid="7130694277228970888">"使用 QR 圖碼掃描器配對新裝置"</string>
     <string name="adb_pair_method_code_title" msgid="1122590300445142904">"使用配對碼配對裝置"</string>
@@ -379,7 +379,7 @@
     <string name="enable_freeform_support" msgid="7599125687603914253">"啟用自由形式視窗"</string>
     <string name="enable_freeform_support_summary" msgid="1822862728719276331">"啟用實驗版自由形式視窗的支援功能。"</string>
     <string name="local_backup_password_title" msgid="4631017948933578709">"電腦備份密碼"</string>
-    <string name="local_backup_password_summary_none" msgid="7646898032616361714">"電腦完整備份目前未受保護"</string>
+    <string name="local_backup_password_summary_none" msgid="7646898032616361714">"目前尚未設定密碼來保護完整的備份檔案 (透過電腦備份的檔案)"</string>
     <string name="local_backup_password_summary_change" msgid="1707357670383995567">"輕觸即可變更或移除電腦完整備份的密碼"</string>
     <string name="local_backup_password_toast_success" msgid="4891666204428091604">"已設定新備份密碼"</string>
     <string name="local_backup_password_toast_confirmation_mismatch" msgid="2994718182129097733">"新密碼與確認密碼不符。"</string>

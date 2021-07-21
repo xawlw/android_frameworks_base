@@ -32,6 +32,7 @@ import android.graphics.RecordingCanvas;
 import android.graphics.Rect;
 import android.graphics.RenderNode;
 import android.graphics.SurfaceTexture;
+import android.os.Build;
 import android.os.Parcel;
 import android.os.Parcelable;
 import android.util.Log;
@@ -70,7 +71,7 @@ public class Surface implements Parcelable {
             throws OutOfResourcesException;
     private static native void nativeUnlockCanvasAndPost(long nativeObject, Canvas canvas);
 
-    @UnsupportedAppUsage
+    @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
     private static native void nativeRelease(long nativeObject);
     private static native boolean nativeIsValid(long nativeObject);
     private static native boolean nativeIsConsumerRunningBehind(long nativeObject);
@@ -123,7 +124,7 @@ public class Surface implements Parcelable {
     private String mName;
     @UnsupportedAppUsage
     long mNativeObject; // package scope only for SurfaceControl access
-    @UnsupportedAppUsage
+    @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
     private long mLockedObject;
     private int mGenerationId; // incremented each time mNativeObject changes
     private final Canvas mCanvas = new CompatibleCanvas();
@@ -221,12 +222,12 @@ public class Surface implements Parcelable {
     }
 
     /**
-     * Create a Surface assosciated with a given {@link SurfaceControl}. Buffers submitted to this
+     * Create a Surface associated with a given {@link SurfaceControl}. Buffers submitted to this
      * surface will be displayed by the system compositor according to the parameters
      * specified by the control. Multiple surfaces may be constructed from one SurfaceControl,
      * but only one can be connected (e.g. have an active EGL context) at a time.
      *
-     * @param from The SurfaceControl to assosciate this Surface with
+     * @param from The SurfaceControl to associate this Surface with
      */
     public Surface(@NonNull SurfaceControl from) {
         copyFrom(from);
@@ -260,7 +261,7 @@ public class Surface implements Parcelable {
     }
 
     /* called from android_view_Surface_createFromIGraphicBufferProducer() */
-    @UnsupportedAppUsage
+    @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
     private Surface(long nativeObject) {
         synchronized (mLock) {
             setNativeObjectLocked(nativeObject);

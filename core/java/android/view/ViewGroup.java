@@ -130,7 +130,7 @@ import java.util.function.Predicate;
 public abstract class ViewGroup extends View implements ViewParent, ViewManager {
     private static final String TAG = "ViewGroup";
 
-    @UnsupportedAppUsage
+    @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
     private static final boolean DBG = false;
 
     /**
@@ -3058,7 +3058,7 @@ public abstract class ViewGroup extends View implements ViewParent, ViewManager 
     /**
      * @hide
      */
-    @UnsupportedAppUsage
+    @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
     public void transformPointToViewLocal(float[] point, View child) {
         point[0] += mScrollX - child.mLeft;
         point[1] += mScrollY - child.mTop;
@@ -3772,7 +3772,7 @@ public abstract class ViewGroup extends View implements ViewParent, ViewManager 
 
     /** @hide */
     @Override
-    @UnsupportedAppUsage
+    @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
     public void onInitializeAccessibilityNodeInfoInternal(AccessibilityNodeInfo info) {
         super.onInitializeAccessibilityNodeInfoInternal(info);
         if (getAccessibilityNodeProvider() != null) {
@@ -3904,7 +3904,7 @@ public abstract class ViewGroup extends View implements ViewParent, ViewManager 
     }
 
     @Override
-    @UnsupportedAppUsage
+    @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
     void dispatchDetachedFromWindow() {
         // If we still have a touch target, we are still in the process of
         // dispatching motion events to a child; we need to get rid of that
@@ -7024,7 +7024,7 @@ public abstract class ViewGroup extends View implements ViewParent, ViewManager 
         // Parent asked to see how big we want to be
         case MeasureSpec.UNSPECIFIED:
             if (childDimension >= 0) {
-                // Child wants a specific size... let him have it
+                // Child wants a specific size... let them have it
                 resultSize = childDimension;
                 resultMode = MeasureSpec.EXACTLY;
             } else if (childDimension == LayoutParams.MATCH_PARENT) {
@@ -7759,7 +7759,7 @@ public abstract class ViewGroup extends View implements ViewParent, ViewManager 
      * @hide
      */
     @Override
-    @UnsupportedAppUsage
+    @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
     public void resolvePadding() {
         super.resolvePadding();
         int count = getChildCount();
@@ -9230,7 +9230,7 @@ public abstract class ViewGroup extends View implements ViewParent, ViewManager 
 
     /** @hide */
     @Override
-    @UnsupportedAppUsage
+    @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
     protected void encodeProperties(@NonNull ViewHierarchyEncoder encoder) {
         super.encodeProperties(encoder);
 

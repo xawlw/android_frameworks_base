@@ -41,7 +41,7 @@ import android.os.UserHandle;
 import android.os.ZygoteProcess;
 import android.os.storage.StorageManager;
 import android.provider.DeviceConfig;
-import android.security.keystore.AndroidKeyStoreProvider;
+import android.security.keystore2.AndroidKeyStoreProvider;
 import android.system.ErrnoException;
 import android.system.Os;
 import android.system.OsConstants;
@@ -65,6 +65,7 @@ import dalvik.system.ZygoteHooks;
 import libcore.io.IoUtils;
 
 import java.io.BufferedReader;
+import java.io.EOFException;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -86,8 +87,9 @@ import java.security.Security;
  */
 public class ZygoteInit {
 
-    // TODO (chriswailes): Change this so it is set with Zygote or ZygoteSecondary as appropriate
     private static final String TAG = "Zygote";
+
+    private static final boolean LOGGING_DEBUG = Log.isLoggable(TAG, Log.DEBUG);
 
     private static final String PROPERTY_DISABLE_GRAPHICS_DRIVER_PRELOADING =
             "ro.zygote.disable_gl_preload";
@@ -124,6 +126,12 @@ public class ZygoteInit {
     private static final int ROOT_GID = 0;
 
     private static boolean sPreloadComplete;
+
+    /**
+     * Cached classloader to use for the system server. Will only be populated in the system
+     * server process.
+     */
+    private static ClassLoader sCachedSystemServerClassLoader = null;
 
     static void preload(TimingsTraceLog bootTimingsTraceLog) {
         Log.d(TAG, "begin preload");
@@ -221,9 +229,7 @@ public class ZygoteInit {
         long startTime = SystemClock.uptimeMillis();
         Trace.traceBegin(
                 Trace.TRACE_TAG_DALVIK, "Starting installation of AndroidKeyStoreProvider");
-        // AndroidKeyStoreProvider.install() manipulates the list of JCA providers to insert
-        // preferred providers. Note this is not done via security.properties as the JCA providers
-        // are not on the classpath in the case of, for example, raw dalvikvm runtimes.
+
         AndroidKeyStoreProvider.install();
         Log.i(TAG, "Installed AndroidKeyStoreProvider in "
                 + (SystemClock.uptimeMillis() - startTime) + "ms.");
@@ -284,6 +290,7 @@ public class ZygoteInit {
                     new BufferedReader(new InputStreamReader(is), Zygote.SOCKET_BUFFER_SIZE);
 
             int count = 0;
+            int missingLambdaCount = 0;
             String line;
             while ((line = br.readLine()) != null) {
                 // Skip comments and blank lines.
@@ -302,24 +309,33 @@ public class ZygoteInit {
                     Class.forName(line, true, null);
                     count++;
                 } catch (ClassNotFoundException e) {
-                    Log.w(TAG, "Class not found for preloading: " + line);
+                    if (line.contains("$$Lambda$")) {
+                        if (LOGGING_DEBUG) {
+                            missingLambdaCount++;
+                        }
+                    } else {
+                        Log.w(TAG, "Class not found for preloading: " + line);
+                    }
                 } catch (UnsatisfiedLinkError e) {
                     Log.w(TAG, "Problem preloading " + line + ": " + e);
                 } catch (Throwable t) {
                     Log.e(TAG, "Error preloading " + line + ".", t);
                     if (t instanceof Error) {
                         throw (Error) t;
-                    }
-                    if (t instanceof RuntimeException) {
+                    } else if (t instanceof RuntimeException) {
                         throw (RuntimeException) t;
+                    } else {
+                        throw new RuntimeException(t);
                     }
-                    throw new RuntimeException(t);
                 }
                 Trace.traceEnd(Trace.TRACE_TAG_DALVIK);
             }
 
             Log.i(TAG, "...preloaded " + count + " classes in "
                     + (SystemClock.uptimeMillis() - startTime) + "ms.");
+            if (LOGGING_DEBUG && missingLambdaCount != 0) {
+                Log.i(TAG, "Unresolved lambda preloads: " + missingLambdaCount);
+            }
         } catch (IOException e) {
             Log.e(TAG, "Error reading " + PRELOADED_CLASSES + ".", e);
         } finally {
@@ -374,7 +390,6 @@ public class ZygoteInit {
                 "/system/framework/android.hidl.manager-V1.0-java.jar", null /*packageName*/,
                 null /*codePaths*/, null /*name*/, 0 /*version*/, SharedLibraryInfo.TYPE_BUILTIN,
                 null /*declaringPackage*/, null /*dependentPackages*/, null /*dependencies*/);
-        hidlManager.addDependency(hidlBase);
 
         SharedLibraryInfo androidTestBase = new SharedLibraryInfo(
                 "/system/framework/android.test.base.jar", null /*packageName*/,
@@ -534,10 +549,8 @@ public class ZygoteInit {
 
             throw new IllegalStateException("Unexpected return from WrapperInit.execApplication");
         } else {
-            ClassLoader cl = null;
-            if (systemServerClasspath != null) {
-                cl = createPathClassLoader(systemServerClasspath, parsedArgs.mTargetSdkVersion);
-
+            ClassLoader cl = getOrCreateSystemServerClassLoader();
+            if (cl != null) {
                 Thread.currentThread().setContextClassLoader(cl);
             }
 
@@ -550,6 +563,23 @@ public class ZygoteInit {
         }
 
         /* should never reach here */
+    }
+
+    /**
+     * Create the classloader for the system server and store it in
+     * {@link sCachedSystemServerClassLoader}. This function may be called through JNI in
+     * system server startup, when the runtime is in a critically low state. Do not do
+     * extended computation etc here.
+     */
+    private static ClassLoader getOrCreateSystemServerClassLoader() {
+        if (sCachedSystemServerClassLoader == null) {
+            final String systemServerClasspath = Os.getenv("SYSTEMSERVERCLASSPATH");
+            if (systemServerClasspath != null) {
+                sCachedSystemServerClassLoader = createPathClassLoader(systemServerClasspath,
+                        VMRuntime.SDK_VERSION_CUR_DEVELOPMENT);
+            }
+        }
+        return sCachedSystemServerClassLoader;
     }
 
     /**
@@ -577,13 +607,24 @@ public class ZygoteInit {
                 codePaths[0],
                 /*dexMetadata*/ null);
 
-        File profileDir = Environment.getDataProfilesDePackageDirectory(
+        File curProfileDir = Environment.getDataProfilesDePackageDirectory(
                 UserHandle.USER_SYSTEM, systemServerPackageName);
-        String profilePath = new File(profileDir, systemServerProfileName).getAbsolutePath();
-        VMRuntime.registerAppInfo(profilePath, codePaths);
+        String curProfilePath = new File(curProfileDir, systemServerProfileName).getAbsolutePath();
+        File refProfileDir = Environment.getDataProfilesDePackageDirectory(
+                UserHandle.USER_SYSTEM, systemServerPackageName);
+        String refProfilePath = new File(refProfileDir, systemServerProfileName).getAbsolutePath();
+        VMRuntime.registerAppInfo(
+                systemServerPackageName,
+                curProfilePath,
+                refProfilePath,
+                codePaths,
+                VMRuntime.CODE_PATH_TYPE_PRIMARY_APK);
     }
 
-    public static void setApiBlacklistExemptions(String[] exemptions) {
+    /**
+     * Sets the list of classes/methods for the hidden API
+     */
+    public static void setApiDenylistExemptions(String[] exemptions) {
         VMRuntime.getRuntime().setHiddenApiExemptions(exemptions);
     }
 
@@ -601,8 +642,11 @@ public class ZygoteInit {
 
     /**
      * Creates a PathClassLoader for the given class path that is associated with a shared
-     * namespace, i.e., this classloader can access platform-private native libraries. The
-     * classloader will use java.library.path as the native library path.
+     * namespace, i.e., this classloader can access platform-private native libraries.
+     *
+     * The classloader will add java.library.path to the native library path for the classloader
+     * namespace. Since it includes platform locations like /system/lib, this is only appropriate
+     * for platform code that don't need linker namespace isolation (as opposed to APEXes and apps).
      */
     static ClassLoader createPathClassLoader(String classPath, int targetSdkVersion) {
         String libraryPath = System.getProperty("java.library.path");
@@ -620,8 +664,6 @@ public class ZygoteInit {
      */
     private static void performSystemServerDexOpt(String classPath) {
         final String[] classPathElements = classPath.split(":");
-        final IInstalld installd = IInstalld.Stub
-                .asInterface(ServiceManager.getService("installd"));
         final String instructionSet = VMRuntime.getRuntime().vmInstructionSet();
 
         String classPathForElement = "";
@@ -658,6 +700,10 @@ public class ZygoteInit {
                 final String uuid = StorageManager.UUID_PRIVATE_INTERNAL;
                 final String seInfo = null;
                 final int targetSdkVersion = 0;  // SystemServer targets the system's SDK version
+                // Wait for installd to be made available
+                IInstalld installd = IInstalld.Stub.asInterface(
+                        ServiceManager.waitForService("installd"));
+
                 try {
                     installd.dexopt(classPathElement, Process.SYSTEM_UID, packageName,
                             instructionSet, dexoptNeeded, outputPath, dexFlags, systemServerFilter,
@@ -752,11 +798,31 @@ public class ZygoteInit {
         int pid;
 
         try {
-            parsedArgs = new ZygoteArguments(args);
+            ZygoteCommandBuffer commandBuffer = new ZygoteCommandBuffer(args);
+            try {
+                parsedArgs = ZygoteArguments.getInstance(commandBuffer);
+            } catch (EOFException e) {
+                throw new AssertionError("Unexpected argument error for forking system server", e);
+            }
+            commandBuffer.close();
             Zygote.applyDebuggerSystemProperty(parsedArgs);
             Zygote.applyInvokeWithSystemProperty(parsedArgs);
 
-            if (Zygote.nativeSupportsTaggedPointers()) {
+            if (Zygote.nativeSupportsMemoryTagging()) {
+                /* The system server has ASYNC MTE by default, in order to allow
+                 * system services to specify their own MTE level later, as you
+                 * can't re-enable MTE once it's disabled. */
+                String mode = SystemProperties.get("arm64.memtag.process.system_server", "async");
+                if (mode.equals("async")) {
+                    parsedArgs.mRuntimeFlags |= Zygote.MEMORY_TAG_LEVEL_ASYNC;
+                } else if (mode.equals("sync")) {
+                    parsedArgs.mRuntimeFlags |= Zygote.MEMORY_TAG_LEVEL_SYNC;
+                } else if (!mode.equals("off")) {
+                    /* When we have an invalid memory tag level, keep the current level. */
+                    parsedArgs.mRuntimeFlags |= Zygote.nativeCurrentTaggingLevel();
+                    Slog.e(TAG, "Unknown memory tag level for the system server: \"" + mode + "\"");
+                }
+            } else if (Zygote.nativeSupportsTaggedPointers()) {
                 /* Enable pointer tagging in the system server. Hardware support for this is present
                  * in all ARMv8 CPUs. */
                 parsedArgs.mRuntimeFlags |= Zygote.MEMORY_TAG_LEVEL_TBI;
@@ -817,7 +883,7 @@ public class ZygoteInit {
      * into new processes are required to either set the priority to the default value or terminate
      * before executing any non-system code.  The native side of this occurs in SpecializeCommon,
      * while the Java Language priority is changed in ZygoteInit.handleSystemServerProcess,
-     * ZygoteConnection.handleChildProc, and Zygote.usapMain.
+     * ZygoteConnection.handleChildProc, and Zygote.childMain.
      *
      * @param argv  Command line arguments used to specify the Zygote's configuration.
      */

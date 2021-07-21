@@ -267,6 +267,64 @@ public final class Call {
     public static final String EVENT_HANDOVER_FAILED =
             "android.telecom.event.HANDOVER_FAILED";
 
+    /**
+     * Event reported from the Telecom stack to report an in-call diagnostic message which the
+     * dialer app may opt to display to the user.  A diagnostic message is used to communicate
+     * scenarios the device has detected which may impact the quality of the ongoing call.
+     * <p>
+     * For example a problem with a bluetooth headset may generate a recommendation for the user to
+     * try using the speakerphone instead, or if the device detects it has entered a poor service
+     * area, the user might be warned so that they can finish their call prior to it dropping.
+     * <p>
+     * A diagnostic message is considered persistent in nature.  When the user enters a poor service
+     * area, for example, the accompanying diagnostic message persists until they leave the area
+     * of poor service.  Each message is accompanied with a {@link #EXTRA_DIAGNOSTIC_MESSAGE_ID}
+     * which uniquely identifies the diagnostic condition being reported.  The framework raises a
+     * call event of type {@link #EVENT_CLEAR_DIAGNOSTIC_MESSAGE} when the condition reported has
+     * been cleared.  The dialer app should display the diagnostic message until it is cleared.
+     * If multiple diagnostic messages are sent with different IDs (which have not yet been cleared)
+     * the dialer app should prioritize the most recently received message, but still provide the
+     * user with a means to review past messages.
+     * <p>
+     * The text of the message is found in {@link #EXTRA_DIAGNOSTIC_MESSAGE} in the form of a human
+     * readable {@link CharSequence} which is intended for display in the call UX.
+     * <p>
+     * The telecom framework audibly notifies the user of the presence of a diagnostic message, so
+     * the dialer app needs only to concern itself with visually displaying the message.
+     * <p>
+     * The dialer app receives this event via
+     * {@link Call.Callback#onConnectionEvent(Call, String, Bundle)}.
+     */
+    public static final String EVENT_DISPLAY_DIAGNOSTIC_MESSAGE =
+            "android.telecom.event.DISPLAY_DIAGNOSTIC_MESSAGE";
+
+    /**
+     * Event reported from the telecom framework when a diagnostic message previously raised with
+     * {@link #EVENT_DISPLAY_DIAGNOSTIC_MESSAGE} has cleared and is no longer pertinent.
+     * <p>
+     * The {@link #EXTRA_DIAGNOSTIC_MESSAGE_ID} indicates the diagnostic message which has been
+     * cleared.
+     * <p>
+     * The dialer app receives this event via
+     * {@link Call.Callback#onConnectionEvent(Call, String, Bundle)}.
+     */
+    public static final String EVENT_CLEAR_DIAGNOSTIC_MESSAGE =
+            "android.telecom.event.CLEAR_DIAGNOSTIC_MESSAGE";
+
+    /**
+     * Integer extra representing a message ID for a message posted via
+     * {@link #EVENT_DISPLAY_DIAGNOSTIC_MESSAGE}.  Used to ensure that the dialer app knows when
+     * the message in question has cleared via {@link #EVENT_CLEAR_DIAGNOSTIC_MESSAGE}.
+     */
+    public static final String EXTRA_DIAGNOSTIC_MESSAGE_ID =
+            "android.telecom.extra.DIAGNOSTIC_MESSAGE_ID";
+
+    /**
+     * {@link CharSequence} extra used with {@link #EVENT_DISPLAY_DIAGNOSTIC_MESSAGE}.  This is the
+     * diagnostic message the dialer app should display.
+     */
+    public static final String EXTRA_DIAGNOSTIC_MESSAGE =
+            "android.telecom.extra.DIAGNOSTIC_MESSAGE";
 
     /**
      * Reject reason used with {@link #reject(int)} to indicate that the user is rejecting this
@@ -462,15 +520,15 @@ public final class Call {
 
         /**
          * Call supports adding participants to the call via
-         * {@link #addConferenceParticipants(List)}.
-         * @hide
+         * {@link #addConferenceParticipants(List)}. Once participants are added, the call becomes
+         * an adhoc conference call ({@link #PROPERTY_IS_ADHOC_CONFERENCE}).
          */
         public static final int CAPABILITY_ADD_PARTICIPANT = 0x02000000;
 
         /**
          * When set for a call, indicates that this {@code Call} can be transferred to another
          * number.
-         * Call supports the blind and assured call transfer feature.
+         * Call supports the confirmed and unconfirmed call transfer feature.
          *
          * @hide
          */
@@ -605,8 +663,11 @@ public final class Call {
 
         /**
          * Indicates that the call is an adhoc conference call. This property can be set for both
-         * incoming and outgoing calls.
-         * @hide
+         * incoming and outgoing calls. An adhoc conference call is formed using
+         * {@link #addConferenceParticipants(List)},
+         * {@link TelecomManager#addNewIncomingConference(PhoneAccountHandle, Bundle)}, or
+         * {@link TelecomManager#startConference(List, Bundle)}, rather than by merging existing
+         * call using {@link #conference(Call)}.
          */
         public static final int PROPERTY_IS_ADHOC_CONFERENCE = 0x00002000;
 
@@ -972,6 +1033,32 @@ public final class Call {
         /**
          * Gets the verification status for the phone number of an incoming call as identified in
          * ATIS-1000082.
+         * <p>
+         * For incoming calls, the number verification status indicates whether the device was
+         * able to verify the authenticity of the calling number using the STIR process outlined
+         * in ATIS-1000082.  {@link Connection#VERIFICATION_STATUS_NOT_VERIFIED} indicates that
+         * the network was not able to use STIR to verify the caller's number (i.e. nothing is
+         * known regarding the authenticity of the number.
+         * {@link Connection#VERIFICATION_STATUS_PASSED} indicates that the network was able to
+         * use STIR to verify the caller's number.  This indicates that the network has a high
+         * degree of confidence that the incoming call actually originated from the indicated
+         * number.  {@link Connection#VERIFICATION_STATUS_FAILED} indicates that the network's
+         * STIR verification did not pass.  This indicates that the incoming call may not
+         * actually be from the indicated number.  This could occur if, for example, the caller
+         * is using an impersonated phone number.
+         * <p>
+         * A {@link CallScreeningService} can use this information to help determine if an
+         * incoming call is potentially an unwanted call.  A verification status of
+         * {@link Connection#VERIFICATION_STATUS_FAILED} indicates that an incoming call may not
+         * actually be from the number indicated on the call (i.e. impersonated number) and that it
+         * should potentially be blocked.  Likewise,
+         * {@link Connection#VERIFICATION_STATUS_PASSED} can be used as a positive signal to
+         * help clarify that the incoming call is originating from the indicated number and it
+         * is less likely to be an undesirable call.
+         * <p>
+         * An {@link InCallService} can use this information to provide a visual indicator to the
+         * user regarding the verification status of a call and to help identify calls from
+         * potentially impersonated numbers.
          * @return the verification status.
          */
         public @Connection.VerificationStatus int getCallerNumberVerificationStatus() {
@@ -1448,8 +1535,11 @@ public final class Call {
 
         /**
          * Writes the string {@param input} into the outgoing text stream for this RTT call. Since
-         * RTT transmits text in real-time, this method should be called once for each character
-         * the user enters into the device.
+         * RTT transmits text in real-time, this method should be called once for each user action.
+         * For example, when the user enters text as discrete characters using the keyboard, this
+         * method should be called once for each character. However, if the user enters text by
+         * pasting or autocomplete, the entire contents of the pasted or autocompleted text should
+         * be sent in one call to this method.
          *
          * This method is not thread-safe -- calling it from multiple threads simultaneously may
          * lead to interleaved text.
@@ -1602,8 +1692,8 @@ public final class Call {
      * Instructs this {@code Call} to be transferred to another number.
      *
      * @param targetNumber The address to which the call will be transferred.
-     * @param isConfirmationRequired if {@code true} it will initiate ASSURED transfer,
-     * if {@code false}, it will initiate BLIND transfer.
+     * @param isConfirmationRequired if {@code true} it will initiate a confirmed transfer,
+     * if {@code false}, it will initiate an unconfirmed transfer.
      *
      * @hide
      */
@@ -1663,7 +1753,6 @@ public final class Call {
      * @hide
      */
     @SystemApi
-    @TestApi
     public void enterBackgroundAudioProcessing() {
         if (mState != STATE_ACTIVE && mState != STATE_RINGING) {
             throw new IllegalStateException("Call must be active or ringing");
@@ -1684,7 +1773,6 @@ public final class Call {
      * @hide
      */
     @SystemApi
-    @TestApi
     public void exitBackgroundAudioProcessing(boolean shouldRing) {
         if (mState != STATE_AUDIO_PROCESSING) {
             throw new IllegalStateException("Call must in the audio processing state");
@@ -1784,7 +1872,6 @@ public final class Call {
      * See {@link Details#CAPABILITY_ADD_PARTICIPANT}.
      *
      * @param participants participants to be pulled to existing call.
-     * @hide
      */
     public void addConferenceParticipants(@NonNull List<Uri> participants) {
         mInCallAdapter.addConferenceParticipants(mTelecomCallId, participants);
@@ -2118,7 +2205,13 @@ public final class Call {
 
     /**
      * Obtains a list of canned, pre-configured message responses to present to the user as
-     * ways of rejecting this {@code Call} using via a text message.
+     * ways of rejecting an incoming {@code Call} using via a text message.
+     * <p>
+     * <em>Note:</em> Since canned responses may be loaded from the file system, they are not
+     * guaranteed to be present when this {@link Call} is first added to the {@link InCallService}
+     * via {@link InCallService#onCallAdded(Call)}.  The callback
+     * {@link Call.Callback#onCannedTextResponsesLoaded(Call, List)} will be called when/if canned
+     * responses for the call become available.
      *
      * @see #reject(boolean, String)
      *

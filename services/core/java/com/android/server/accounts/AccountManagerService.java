@@ -67,6 +67,7 @@ import android.content.pm.ResolveInfo;
 import android.content.pm.Signature;
 import android.content.pm.UserInfo;
 import android.database.Cursor;
+import android.database.sqlite.SQLiteFullException;
 import android.database.sqlite.SQLiteStatement;
 import android.os.Binder;
 import android.os.Bundle;
@@ -2314,7 +2315,7 @@ public class AccountManagerService
                 List<String> accountRemovedReceivers =
                     getAccountRemovedReceivers(account, accounts);
                 accounts.accountsDb.beginTransaction();
-                // Set to a dummy value, this will only be used if the database
+                // Set to a placeholder value, this will only be used if the database
                 // transaction succeeds.
                 long accountId = -1;
                 try {
@@ -5153,7 +5154,7 @@ public class AccountManagerService
                     logStatement.bindLong(6, userDebugDbInsertionPoint);
                     try {
                         logStatement.execute();
-                    } catch (IllegalStateException e) {
+                    } catch (IllegalStateException | SQLiteFullException e) {
                         // Guard against crash, DB can already be closed
                         // since this statement is executed on a handler thread
                         Slog.w(TAG, "Failed to insert a log record. accountId=" + accountId
@@ -6268,7 +6269,7 @@ public class AccountManagerService
                     PRE_N_DATABASE_NAME);
             if (userId == 0) {
                 // Migrate old file, if it exists, to the new location.
-                // Make sure the new file doesn't already exist. A dummy file could have been
+                // Make sure the new file doesn't already exist. A placeholder file could have been
                 // accidentally created in the old location,
                 // causing the new one to become corrupted as well.
                 File oldFile = new File(systemDir, PRE_N_DATABASE_NAME);

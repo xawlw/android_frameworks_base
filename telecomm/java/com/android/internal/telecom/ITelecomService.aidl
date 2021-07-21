@@ -179,6 +179,11 @@ interface ITelecomService {
     boolean isInCall(String callingPackage, String callingFeatureId);
 
     /**
+     * @see TelecomServiceImpl#hasManageOngoingCallsPermission
+     */
+    boolean hasManageOngoingCallsPermission(String callingPackage);
+
+    /**
      * @see TelecomServiceImpl#isInManagedCall
      */
     boolean isInManagedCall(String callingPackage, String callingFeatureId);
@@ -191,7 +196,7 @@ interface ITelecomService {
     /**
      * @see TelecomServiceImpl#getCallState
      */
-    @UnsupportedAppUsage
+    @UnsupportedAppUsage(maxTargetSdk = 30, trackingBug = 170729553)
     int getCallState();
 
     /**
@@ -326,6 +331,8 @@ interface ITelecomService {
      */
     void handleCallIntent(in Intent intent, in String callingPackageProxy);
 
+    void cleanupStuckCalls();
+
     void setTestDefaultCallRedirectionApp(String packageName);
 
     void setTestPhoneAcctSuggestionComponent(String flattenedComponentName);
@@ -344,4 +351,8 @@ interface ITelecomService {
      */
     void setTestDefaultDialer(in String packageName);
 
+    /**
+     * @see TelecomServiceImpl#setTestCallDiagnosticService
+     */
+    void setTestCallDiagnosticService(in String packageName);
 }

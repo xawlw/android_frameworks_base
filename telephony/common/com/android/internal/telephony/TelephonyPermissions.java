@@ -74,7 +74,8 @@ public final class TelephonyPermissions {
      *   <li>return false: if the caller lacks all of these permissions and doesn't support runtime
      *       permissions. This implies that the user revoked the ability to read phone state
      *       manually (via AppOps). In this case we can't throw as it would break app compatibility,
-     *       so we return false to indicate that the calling function should return dummy data.
+     *       so we return false to indicate that the calling function should return placeholder
+     *       data.
      * </ul>
      *
      * <p>Note: for simplicity, this method always returns false for callers using legacy
@@ -119,7 +120,8 @@ public final class TelephonyPermissions {
      *   <li>return false: if the caller lacks all of these permissions and doesn't support runtime
      *       permissions. This implies that the user revoked the ability to read phone state
      *       manually (via AppOps). In this case we can't throw as it would break app compatibility,
-     *       so we return false to indicate that the calling function should return dummy data.
+     *       so we return false to indicate that the calling function should return placeholder
+     *       data.
      * </ul>
      *
      * <p>Note: for simplicity, this method always returns false for callers using legacy
@@ -225,7 +227,7 @@ public final class TelephonyPermissions {
      *   <li>return false: if the caller is targeting pre-Q and does have the READ_PHONE_STATE
      *       permission. In this case the caller would expect to have access to the device
      *       identifiers so false is returned instead of throwing a SecurityException to indicate
-     *       the calling function should return dummy data.
+     *       the calling function should return placeholder data.
      * </ul>
      */
     public static boolean checkCallingOrSelfReadDeviceIdentifiers(Context context,
@@ -249,7 +251,7 @@ public final class TelephonyPermissions {
      *   <li>return false: if the caller is targeting pre-Q and does have the READ_PHONE_STATE
      *       permission or carrier privileges. In this case the caller would expect to have access
      *       to the device identifiers so false is returned instead of throwing a SecurityException
-     *       to indicate the calling function should return dummy data.
+     *       to indicate the calling function should return placeholder data.
      * </ul>
      */
     public static boolean checkCallingOrSelfReadDeviceIdentifiers(Context context, int subId,
@@ -271,7 +273,7 @@ public final class TelephonyPermissions {
      *   <li>return false: if the caller is targeting pre-Q and does have the READ_PHONE_STATE
      *       permission. In this case the caller would expect to have access to the device
      *       identifiers so false is returned instead of throwing a SecurityException to indicate
-     *       the calling function should return dummy data.
+     *       the calling function should return placeholder data.
      * </ul>
      */
     public static boolean checkCallingOrSelfReadSubscriberIdentifiers(Context context, int subId,
@@ -295,7 +297,7 @@ public final class TelephonyPermissions {
      *   <li>return false: if the caller is targeting pre-Q and does have the READ_PHONE_STATE
      *       permission. In this case the caller would expect to have access to the device
      *       identifiers so false is returned instead of throwing a SecurityException to indicate
-     *       the calling function should return dummy data.
+     *       the calling function should return placeholder data.
      * </ul>
      */
     private static boolean checkPrivilegedReadPermissionOrCarrierPrivilegePermission(
@@ -523,7 +525,7 @@ public final class TelephonyPermissions {
      *
      * @throws SecurityException if the caller does not have the required permission/privileges
      */
-    public static void enforeceCallingOrSelfReadPhoneStatePermissionOrCarrierPrivilege(
+    public static void enforceCallingOrSelfReadPhoneStatePermissionOrCarrierPrivilege(
             Context context, int subId, String message) {
         if (context.checkCallingOrSelfPermission(android.Manifest.permission.READ_PHONE_STATE)
                 == PERMISSION_GRANTED) {
@@ -543,7 +545,7 @@ public final class TelephonyPermissions {
      *
      * @throws SecurityException if the caller does not have the required permission/privileges
      */
-    public static void enforeceCallingOrSelfReadPrivilegedPhoneStatePermissionOrCarrierPrivilege(
+    public static void enforceCallingOrSelfReadPrivilegedPhoneStatePermissionOrCarrierPrivilege(
             Context context, int subId, String message) {
         if (context.checkCallingOrSelfPermission(Manifest.permission.READ_PRIVILEGED_PHONE_STATE)
                 == PERMISSION_GRANTED) {
@@ -565,7 +567,7 @@ public final class TelephonyPermissions {
      *
      * @throws SecurityException if the caller does not have the required permission/privileges
      */
-    public static void enforeceCallingOrSelfReadPrecisePhoneStatePermissionOrCarrierPrivilege(
+    public static void enforceCallingOrSelfReadPrecisePhoneStatePermissionOrCarrierPrivilege(
             Context context, int subId, String message) {
         if (context.checkCallingOrSelfPermission(Manifest.permission.READ_PRIVILEGED_PHONE_STATE)
                 == PERMISSION_GRANTED) {
@@ -638,6 +640,67 @@ public final class TelephonyPermissions {
     }
 
     /**
+     * Given a list of permissions, check to see if the caller has at least one of them. If the
+     * caller has none of these permissions, throw a SecurityException.
+     */
+    public static void enforceAnyPermissionGranted(Context context, int uid, String message,
+            String... permissions) {
+        if (permissions.length == 0) return;
+        boolean isGranted = false;
+        for (String perm : permissions) {
+            if (context.checkCallingOrSelfPermission(perm) == PERMISSION_GRANTED) {
+                isGranted = true;
+                break;
+            }
+        }
+
+        if (isGranted) return;
+
+        StringBuilder b = new StringBuilder(message);
+        b.append(": Neither user ");
+        b.append(uid);
+        b.append(" nor current process has ");
+        b.append(permissions[0]);
+        for (int i = 1; i < permissions.length; i++) {
+            b.append(" or ");
+            b.append(permissions[i]);
+        }
+        throw new SecurityException(b.toString());
+    }
+
+    /**
+     * Given a list of permissions, check to see if the caller has at least one of them granted. If
+     * not, check to see if the caller has carrier privileges. If the caller does not have any  of
+     * these permissions, throw a SecurityException.
+     */
+    public static void enforceAnyPermissionGrantedOrCarrierPrivileges(Context context, int subId,
+            int uid, String message, String... permissions) {
+        if (permissions.length == 0) return;
+        boolean isGranted = false;
+        for (String perm : permissions) {
+            if (context.checkCallingOrSelfPermission(perm) == PERMISSION_GRANTED) {
+                isGranted = true;
+                break;
+            }
+        }
+
+        if (isGranted) return;
+        if (checkCarrierPrivilegeForSubId(context, subId)) return;
+
+        StringBuilder b = new StringBuilder(message);
+        b.append(": Neither user ");
+        b.append(uid);
+        b.append(" nor current process has ");
+        b.append(permissions[0]);
+        for (int i = 1; i < permissions.length; i++) {
+            b.append(" or ");
+            b.append(permissions[i]);
+        }
+        b.append(" or carrier privileges");
+        throw new SecurityException(b.toString());
+    }
+
+    /**
      * Throws if the caller is not of a shell (or root) UID.
      *
      * @param callingUid pass Binder.callingUid().
@@ -648,5 +711,24 @@ public final class TelephonyPermissions {
         }
 
         throw new SecurityException(message + ": Only shell user can call it");
+    }
+
+    /**
+     * Returns the target SDK version number for a given package name.
+     *
+     * This call MUST be invoked before clearing the calling UID.
+     *
+     * @return target SDK if the package is found or INT_MAX.
+     */
+    public static int getTargetSdk(Context c, String packageName) {
+        try {
+            final ApplicationInfo ai = c.getPackageManager().getApplicationInfoAsUser(
+                    packageName, 0, UserHandle.getUserHandleForUid(Binder.getCallingUid()));
+            if (ai != null) return ai.targetSdkVersion;
+        } catch (PackageManager.NameNotFoundException unexpected) {
+            Log.e(LOG_TAG, "Failed to get package info for pkg="
+                    + packageName + ", uid=" + Binder.getCallingUid());
+        }
+        return Integer.MAX_VALUE;
     }
 }

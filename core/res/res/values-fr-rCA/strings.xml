@@ -57,7 +57,7 @@
     <string name="imei" msgid="2157082351232630390">"Code IIEM"</string>
     <string name="meid" msgid="3291227361605924674">"MEID"</string>
     <string name="ClipMmi" msgid="4110549342447630629">"Numéro de l\'appelant (entrant)"</string>
-    <string name="ClirMmi" msgid="4702929460236547156">"Numéro de l\'appelant (sortant)"</string>
+    <string name="ClirMmi" msgid="6752346475055446417">"Masquer l\'identifiant de l\'appelant (appels sortants)"</string>
     <string name="ColpMmi" msgid="4736462893284419302">"Identifiant de la ligne connectée"</string>
     <string name="ColrMmi" msgid="5889782479745764278">"Restriction d\'identifiant de la ligne connectée"</string>
     <string name="CfMmi" msgid="8390012691099787178">"Transfert d\'appel"</string>
@@ -272,8 +272,8 @@
     <string name="notification_channel_security" msgid="8516754650348238057">"Sécurité"</string>
     <string name="notification_channel_car_mode" msgid="2123919247040988436">"Mode Voiture"</string>
     <string name="notification_channel_account" msgid="6436294521740148173">"État du compte"</string>
-    <string name="notification_channel_developer" msgid="1691059964407549150">"Messages des concepteurs"</string>
-    <string name="notification_channel_developer_important" msgid="7197281908918789589">"Messages importants à l\'intention des concepteurs"</string>
+    <string name="notification_channel_developer" msgid="1691059964407549150">"Messages des développeurs"</string>
+    <string name="notification_channel_developer_important" msgid="7197281908918789589">"Messages importants à l\'intention des développeurs"</string>
     <string name="notification_channel_updates" msgid="7907863984825495278">"Mises à jour"</string>
     <string name="notification_channel_network_status" msgid="2127687368725272809">"État du réseau"</string>
     <string name="notification_channel_network_alerts" msgid="6312366315654526528">"Alertes réseau"</string>
@@ -349,6 +349,8 @@
     <string name="permdesc_receiveMms" msgid="958102423732219710">"Permet à l\'application de recevoir et de traiter les messages multimédias. Cette autorisation lui donne la possibilité de surveiller ou de supprimer les messages envoyés à votre appareil sans vous les montrer."</string>
     <string name="permlab_bindCellBroadcastService" msgid="586746677002040651">"Transférer les messages de diffusion cellulaire"</string>
     <string name="permdesc_bindCellBroadcastService" msgid="6540910200973641606">"Permet à l\'application d\'établir un lien avec le module de diffusion cellulaire afin de transférer les messages de diffusion cellulaire à mesure de leur réception. Dans certaines régions, des alertes de diffusion cellulaire sont envoyées afin de vous avertir de situations d\'urgence. Des applications malveillantes peuvent interférer avec les performances ou le fonctionnement de votre appareil lors de la réception d\'une alerte d\'urgence par diffusion cellulaire."</string>
+    <string name="permlab_manageOngoingCalls" msgid="281244770664231782">"Gérer les appels en cours"</string>
+    <string name="permdesc_manageOngoingCalls" msgid="7003138133829915265">"Autorise une application à afficher les renseignements concernant les appels en cours sur votre appareil et à les gérer."</string>
     <string name="permlab_readCellBroadcasts" msgid="5869884450872137693">"lire les messages de diffusion cellulaire"</string>
     <string name="permdesc_readCellBroadcasts" msgid="672513437331980168">"Permet à l\'application de lire les messages de diffusion cellulaire que votre appareil reçoit. Dans certaines zones géographiques, des alertes vous sont envoyées afin de vous prévenir en cas de situation d\'urgence. Des applications malveillantes peuvent venir perturber les performances ou le fonctionnement de votre appareil lors de la réception d\'un message de diffusion cellulaire."</string>
     <string name="permlab_subscribedFeedsRead" msgid="217624769238425461">"lire les flux auxquels vous êtes abonné"</string>
@@ -570,7 +572,7 @@
     <string name="permlab_manageFace" msgid="4569549381889283282">"gérer le matériel de déverrouillage par reconnaissance faciale"</string>
     <string name="permdesc_manageFace" msgid="6204569688492710471">"Permet à l\'appli d\'employer des méthodes d\'aj. et de suppr. de modèles de reconn. visage."</string>
     <string name="permlab_useFaceAuthentication" msgid="1011430526454859030">"utiliser le matériel de déverrouillage par reconnaissance faciale"</string>
-    <string name="permdesc_useFaceAuthentication" msgid="3115697017684668012">"Permet à l\'appli d\'utiliser du matériel de déverr. par reconn faciale pour l\'authentific."</string>
+    <string name="permdesc_useFaceAuthentication" msgid="3115697017684668012">"Permet à l\'appli d\'utiliser du matériel de déverr. par reconn. faciale pour l\'authentific."</string>
     <string name="face_recalibrate_notification_name" msgid="6006095897989257026">"Déverrouillage par reconnaissance faciale"</string>
     <string name="face_recalibrate_notification_title" msgid="5944930528030496897">"Inscrivez votre visage à nouveau"</string>
     <string name="face_recalibrate_notification_content" msgid="892757485125249962">"Pour améliorer la reconnaissance, veuillez enregistrer à nouveau votre visage"</string>
@@ -679,13 +681,13 @@
     <string name="policydesc_watchLogin_secondaryUser" product="tv" msgid="8965224107449407052">"Surveillez le nombre de mots de passe incorrects entrés lors du déverrouillage de l\'écran et verrouillez votre appareil Android TV ou effacez toutes les données de l\'utilisateur en cas d\'un nombre trop élevé de tentatives."</string>
     <string name="policydesc_watchLogin_secondaryUser" product="default" msgid="9177645136475155924">"Surveille le nombre de mots de passe incorrects entrés lors du déverrouillage de l\'écran et verrouille le téléphone ou efface toutes les données de l\'utilisateur en cas d\'un nombre trop élevé de tentatives."</string>
     <string name="policylab_resetPassword" msgid="214556238645096520">"Modifier le verrouillage de l\'écran"</string>
-    <string name="policydesc_resetPassword" msgid="4626419138439341851">"Modifier le verrouillage de l\'écran"</string>
+    <string name="policydesc_resetPassword" msgid="4626419138439341851">"Modifier le verrouillage de l\'écran."</string>
     <string name="policylab_forceLock" msgid="7360335502968476434">"Verrouiller l\'écran"</string>
-    <string name="policydesc_forceLock" msgid="1008844760853899693">"Gérer le mode et les conditions de verrouillage de l\'écran"</string>
+    <string name="policydesc_forceLock" msgid="1008844760853899693">"Gérer le mode et les conditions de verrouillage de l\'écran."</string>
     <string name="policylab_wipeData" msgid="1359485247727537311">"Effacer toutes les données"</string>
     <string name="policydesc_wipeData" product="tablet" msgid="7245372676261947507">"Effacer les données de la tablette sans avertissement, en rétablissant les paramètres par défaut"</string>
     <string name="policydesc_wipeData" product="tv" msgid="513862488950801261">"Effacez les données de votre appareil Android TV sans avertissement en effectuant une réinitialisation des paramètres d\'usine."</string>
-    <string name="policydesc_wipeData" product="default" msgid="8036084184768379022">"Effacer les données du téléphone sans avertissement en rétablissant les paramètres par défaut"</string>
+    <string name="policydesc_wipeData" product="default" msgid="8036084184768379022">"Effacer les données du téléphone sans avertissement en rétablissant les paramètres par défaut."</string>
     <string name="policylab_wipeData_secondaryUser" msgid="413813645323433166">"Effacer les données de l\'utilisateur"</string>
     <string name="policydesc_wipeData_secondaryUser" product="tablet" msgid="2336676480090926470">"Effacer les données de l\'utilisateur sur cette tablette sans avertissement."</string>
     <string name="policydesc_wipeData_secondaryUser" product="tv" msgid="2293713284515865200">"Effacez les données de cet utilisateur sur cet appareil Android TV sans avertissement."</string>
@@ -835,7 +837,7 @@
     <string name="lockscreen_pattern_wrong" msgid="2940138714468358458">"Réessayer"</string>
     <string name="lockscreen_password_wrong" msgid="8605355913868947490">"Réessayer"</string>
     <string name="lockscreen_storage_locked" msgid="634993789186443380">"Déverr. pour acc. aux autres fonction. et données"</string>
-    <string name="faceunlock_multiple_failures" msgid="681991538434031708">"Nombre maximal autorisé de tentatives Face Unlock atteint."</string>
+    <string name="faceunlock_multiple_failures" msgid="681991538434031708">"Nombre maximal atteint de tentatives de déverrouillage par reconnaissance faciale"</string>
     <string name="lockscreen_missing_sim_message_short" msgid="1248431165144893792">"Aucune carte SIM"</string>
     <string name="lockscreen_missing_sim_message" product="tablet" msgid="8596805728510570760">"Aucune carte SIM n\'est insérée dans la tablette."</string>
     <string name="lockscreen_missing_sim_message" product="tv" msgid="2582768023352171073">"Aucune carte SIM ne se trouve dans votre appareil Android TV."</string>
@@ -1211,7 +1213,7 @@
     <string name="dump_heap_ready_notification" msgid="2302452262927390268">"L\'empreinte de mémoire <xliff:g id="PROC">%1$s</xliff:g> est prête"</string>
     <string name="dump_heap_notification_detail" msgid="8431586843001054050">"L\'empreinte de mémoire a été recueillie. Touchez ici pour la partager."</string>
     <string name="dump_heap_title" msgid="4367128917229233901">"Partager l\'empreinte de mémoire?"</string>
-    <string name="dump_heap_text" msgid="1692649033835719336">"Le processus <xliff:g id="PROC">%1$s</xliff:g> a dépassé sa limite de mémoire de <xliff:g id="SIZE">%2$s</xliff:g>. Vous pouvez partager son empreinte de mémoire avec son concepteur. Attention : Cette empreinte peut contenir certains de vos renseignements personnels auxquels l\'application a accès."</string>
+    <string name="dump_heap_text" msgid="1692649033835719336">"Le processus <xliff:g id="PROC">%1$s</xliff:g> a dépassé sa limite de mémoire de <xliff:g id="SIZE">%2$s</xliff:g>. Vous pouvez partager son empreinte de mémoire avec son développeur. Attention : Cette empreinte peut contenir certains de vos renseignements personnels auxquels l\'application a accès."</string>
     <string name="dump_heap_system_text" msgid="6805155514925350849">"Le processus <xliff:g id="PROC">%1$s</xliff:g> a dépassé sa limite de mémoire de <xliff:g id="SIZE">%2$s</xliff:g>. Vous pouvez partager son empreinte de mémoire. Attention : Cette empreinte peut contenir des renseignements personnels auxquels le processus a accès, y compris du texte que vous avez entré."</string>
     <string name="dump_heap_ready_text" msgid="5849618132123045516">"Une empreinte de mémoire du processus lié à l\'application <xliff:g id="PROC">%1$s</xliff:g> peut être partagée. Attention : Cette empreinte peut contenir des renseignements personnels auxquels le processus a accès, y compris du texte que vous avez entré."</string>
     <string name="sendText" msgid="493003724401350724">"Sélectionner une action pour le texte"</string>
@@ -1340,11 +1342,14 @@
     <string name="alert_windows_notification_turn_off_action" msgid="7805857234839123780">"Désactiver"</string>
     <string name="ext_media_checking_notification_title" msgid="8299199995416510094">"Vérification de <xliff:g id="NAME">%s</xliff:g> en cours…"</string>
     <string name="ext_media_checking_notification_message" msgid="2231566971425375542">"Vérification du contenu actuel"</string>
+    <string name="ext_media_checking_notification_message" product="tv" msgid="7986154434946021415">"Analyse de l\'espace de stockage sur le support en cours…"</string>
     <string name="ext_media_new_notification_title" msgid="3517407571407687677">"Nouveau périphérique <xliff:g id="NAME">%s</xliff:g>"</string>
     <string name="ext_media_new_notification_title" product="automotive" msgid="9085349544984742727">"<xliff:g id="NAME">%s</xliff:g> ne fonctionne pas"</string>
     <string name="ext_media_new_notification_message" msgid="6095403121990786986">"Toucher pour configurer"</string>
+    <string name="ext_media_new_notification_message" product="tv" msgid="216863352100263668">"Sélectionnez pour configurer"</string>
     <string name="ext_media_new_notification_message" product="automotive" msgid="5140127881613227162">"Vous devrez peut-être reformater l\'appareil. Touchez pour l\'éjecter."</string>
     <string name="ext_media_ready_notification_message" msgid="777258143284919261">"Pour transférer des photos et d\'autres fichiers"</string>
+    <string name="ext_media_ready_notification_message" product="tv" msgid="8847134811163165935">"Parcourir les fichiers multimédias"</string>
     <string name="ext_media_unmountable_notification_title" msgid="4895444667278979910">"Il y a un problème avec <xliff:g id="NAME">%s</xliff:g>"</string>
     <string name="ext_media_unmountable_notification_title" product="automotive" msgid="3142723758949023280">"<xliff:g id="NAME">%s</xliff:g> ne fonctionne pas"</string>
     <string name="ext_media_unmountable_notification_message" msgid="3256290114063126205">"Touchez la notification pour corriger la situation"</string>
@@ -1353,7 +1358,7 @@
     <string name="ext_media_unsupported_notification_title" msgid="4358280700537030333">"<xliff:g id="NAME">%s</xliff:g> non compatible"</string>
     <string name="ext_media_unsupported_notification_title" product="automotive" msgid="6004193172658722381">"<xliff:g id="NAME">%s</xliff:g> ne fonctionne pas"</string>
     <string name="ext_media_unsupported_notification_message" msgid="917738524888367560">"Cet appareil n\'est pas compatible avec la mémoire de stockage « <xliff:g id="NAME">%s</xliff:g> ». Touchez pour la configurer dans un format compatible."</string>
-    <string name="ext_media_unsupported_notification_message" product="tv" msgid="7744945987775645685">"Cet appareil ne prend pas en charge ce média « <xliff:g id="NAME">%s</xliff:g> ». Sélectionnez-le pour le configurer dans un format compatible."</string>
+    <string name="ext_media_unsupported_notification_message" product="tv" msgid="1595482802187036532">"Sélectionner pour configurer <xliff:g id="NAME">%s</xliff:g> dans un format pris en charge."</string>
     <string name="ext_media_unsupported_notification_message" product="automotive" msgid="3412494732736336330">"Vous devrez peut-être reformater l\'appareil"</string>
     <string name="ext_media_badremoval_notification_title" msgid="4114625551266196872">"Retrait inattendu de la mémoire « <xliff:g id="NAME">%s</xliff:g> »"</string>
     <string name="ext_media_badremoval_notification_message" msgid="1986514704499809244">"Éjectez les périphériques avant de les retirer pour éviter toute perte de données."</string>
@@ -1713,6 +1718,17 @@
     <string name="mediasize_na_monarch" msgid="4396943937986136896">"Monarque"</string>
     <string name="mediasize_na_quarto" msgid="2119101847712239885">"In-quarto"</string>
     <string name="mediasize_na_foolscap" msgid="5011612828564394648">"Foolscap"</string>
+    <string name="mediasize_na_ansi_c" msgid="3104916921818289618">"ANSI C"</string>
+    <string name="mediasize_na_ansi_d" msgid="254005964819282724">"ANSI D"</string>
+    <string name="mediasize_na_ansi_e" msgid="4424174989686785675">"ANSI E"</string>
+    <string name="mediasize_na_ansi_f" msgid="146980362213260987">"ANSI F"</string>
+    <string name="mediasize_na_arch_a" msgid="5280681822380032361">"Arch A"</string>
+    <string name="mediasize_na_arch_b" msgid="2113344093437297427">"Arch B"</string>
+    <string name="mediasize_na_arch_c" msgid="971002546186856623">"Arch C"</string>
+    <string name="mediasize_na_arch_d" msgid="6450996075335049806">"Arch D"</string>
+    <string name="mediasize_na_arch_e" msgid="6782708486949266519">"Arch E"</string>
+    <string name="mediasize_na_arch_e1" msgid="4707138568738504275">"Arch E1"</string>
+    <string name="mediasize_na_super_b" msgid="6964127155618393178">"Super B"</string>
     <string name="mediasize_chinese_roc_8k" msgid="411670106572707544">"ROC 8K"</string>
     <string name="mediasize_chinese_roc_16k" msgid="7496706798725321898">"ROC 16K"</string>
     <string name="mediasize_chinese_prc_1" msgid="946949835711037253">"PRC 1"</string>
@@ -1749,6 +1765,7 @@
     <string name="mediasize_japanese_kahu" msgid="7290232592648122042">"Kahu"</string>
     <string name="mediasize_japanese_kaku2" msgid="7477551750461028312">"Kaku2"</string>
     <string name="mediasize_japanese_you4" msgid="5552111912684384833">"You4"</string>
+    <string name="mediasize_japanese_l" msgid="1326765321473431817">"L"</string>
     <string name="mediasize_unknown_portrait" msgid="3817016220446495613">"Taille inconnue au format portrait"</string>
     <string name="mediasize_unknown_landscape" msgid="1584741567225095325">"Taille inconnue au format paysage"</string>
     <string name="write_fail_reason_cancelled" msgid="2344081488493969190">"Annulé"</string>
@@ -1891,7 +1908,7 @@
     <string name="work_mode_turn_on" msgid="3662561662475962285">"Activer"</string>
     <string name="app_blocked_title" msgid="7353262160455028160">"L\'application n\'est pas accessible"</string>
     <string name="app_blocked_message" msgid="542972921087873023">"<xliff:g id="APP_NAME">%1$s</xliff:g> n\'est pas accessible pour le moment."</string>
-    <string name="deprecated_target_sdk_message" msgid="5203207875657579953">"Cette application a été conçue pour une ancienne version d\'Android et pourrait ne pas fonctionner correctement. Essayez de vérifier les mises à jour ou communiquez avec son concepteur."</string>
+    <string name="deprecated_target_sdk_message" msgid="5203207875657579953">"Cette application a été conçue pour une ancienne version d\'Android et pourrait ne pas fonctionner correctement. Essayez de vérifier les mises à jour ou communiquez avec son développeur."</string>
     <string name="deprecated_target_sdk_app_store" msgid="8456784048558808909">"Vérifier la présence de mises à jour"</string>
     <string name="new_sms_notification_title" msgid="6528758221319927107">"Vous avez de nouveaux messages"</string>
     <string name="new_sms_notification_content" msgid="3197949934153460639">"Ouvrez l\'application de messagerie texte pour l\'afficher"</string>

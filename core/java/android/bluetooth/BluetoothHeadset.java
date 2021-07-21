@@ -27,6 +27,7 @@ import android.compat.annotation.UnsupportedAppUsage;
 import android.content.ComponentName;
 import android.content.Context;
 import android.os.Binder;
+import android.os.Build;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
@@ -79,7 +80,7 @@ public final class BluetoothHeadset implements BluetoothProfile {
 
     /**
      * Intent used to broadcast the change in the Audio Connection state of the
-     * HDP profile.
+     * HFP profile.
      *
      * <p>This intent will have 3 extras:
      * <ul>
@@ -112,7 +113,7 @@ public final class BluetoothHeadset implements BluetoothProfile {
      * @hide
      */
     @SdkConstant(SdkConstantType.BROADCAST_INTENT_ACTION)
-    @UnsupportedAppUsage
+    @UnsupportedAppUsage(trackingBug = 171933273)
     public static final String ACTION_ACTIVE_DEVICE_CHANGED =
             "android.bluetooth.headset.profile.action.ACTIVE_DEVICE_CHANGED";
 
@@ -605,6 +606,7 @@ public final class BluetoothHeadset implements BluetoothProfile {
      * @return true if priority is set, false on error
      * @hide
      * @deprecated Replaced with {@link #setConnectionPolicy(BluetoothDevice, int)}
+     * @removed
      */
     @Deprecated
     @SystemApi
@@ -674,7 +676,7 @@ public final class BluetoothHeadset implements BluetoothProfile {
      * @return priority of the device
      * @hide
      */
-    @UnsupportedAppUsage
+    @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
     @RequiresPermission(Manifest.permission.BLUETOOTH)
     public int getPriority(BluetoothDevice device) {
         if (VDBG) log("getPriority(" + device + ")");
@@ -717,6 +719,48 @@ public final class BluetoothHeadset implements BluetoothProfile {
         }
         if (service == null) Log.w(TAG, "Proxy not attached to service");
         return BluetoothProfile.CONNECTION_POLICY_FORBIDDEN;
+    }
+
+    /**
+     * Checks whether the headset supports some form of noise reduction
+     *
+     * @param device Bluetooth device
+     * @return true if echo cancellation and/or noise reduction is supported, false otherwise
+     */
+    @RequiresPermission(Manifest.permission.BLUETOOTH)
+    public boolean isNoiseReductionSupported(@NonNull BluetoothDevice device) {
+        if (DBG) log("isNoiseReductionSupported()");
+        final IBluetoothHeadset service = mService;
+        if (service != null && isEnabled() && isValidDevice(device)) {
+            try {
+                return service.isNoiseReductionSupported(device);
+            } catch (RemoteException e) {
+                Log.e(TAG, Log.getStackTraceString(new Throwable()));
+            }
+        }
+        if (service == null) Log.w(TAG, "Proxy not attached to service");
+        return false;
+    }
+
+    /**
+     * Checks whether the headset supports voice recognition
+     *
+     * @param device Bluetooth device
+     * @return true if voice recognition is supported, false otherwise
+     */
+    @RequiresPermission(Manifest.permission.BLUETOOTH)
+    public boolean isVoiceRecognitionSupported(@NonNull BluetoothDevice device) {
+        if (DBG) log("isVoiceRecognitionSupported()");
+        final IBluetoothHeadset service = mService;
+        if (service != null && isEnabled() && isValidDevice(device)) {
+            try {
+                return service.isVoiceRecognitionSupported(device);
+            } catch (RemoteException e) {
+                Log.e(TAG, Log.getStackTraceString(new Throwable()));
+            }
+        }
+        if (service == null) Log.w(TAG, "Proxy not attached to service");
+        return false;
     }
 
     /**
@@ -821,7 +865,7 @@ public final class BluetoothHeadset implements BluetoothProfile {
      *
      * @hide
      */
-    @UnsupportedAppUsage
+    @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
     public int getAudioState(BluetoothDevice device) {
         if (VDBG) log("getAudioState");
         final IBluetoothHeadset service = mService;
@@ -1069,7 +1113,7 @@ public final class BluetoothHeadset implements BluetoothProfile {
      *
      * @hide
      */
-    @UnsupportedAppUsage
+    @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
     public void phoneStateChanged(int numActive, int numHeld, int callState, String number,
             int type, String name) {
         final IBluetoothHeadset service = mService;
@@ -1168,7 +1212,7 @@ public final class BluetoothHeadset implements BluetoothProfile {
      * @hide
      */
     @RequiresPermission(android.Manifest.permission.BLUETOOTH_ADMIN)
-    @UnsupportedAppUsage
+    @UnsupportedAppUsage(trackingBug = 171933273)
     public boolean setActiveDevice(@Nullable BluetoothDevice device) {
         if (DBG) {
             Log.d(TAG, "setActiveDevice: " + device);
@@ -1194,7 +1238,7 @@ public final class BluetoothHeadset implements BluetoothProfile {
      * is active.
      * @hide
      */
-    @UnsupportedAppUsage
+    @UnsupportedAppUsage(trackingBug = 171933273)
     @Nullable
     @RequiresPermission(Manifest.permission.BLUETOOTH)
     public BluetoothDevice getActiveDevice() {

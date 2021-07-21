@@ -1034,7 +1034,7 @@ class RollbackManagerServiceImpl extends IRollbackManager.Stub {
      */
     @AnyThread
     private boolean isRollbackWhitelisted(String packageName) {
-        // TODO: Remove #isModule when the white list is ready.
+        // TODO: Remove #isModule when the allowlist is ready.
         return SystemConfig.getInstance().getRollbackWhitelistedPackages().contains(packageName)
                 || isModule(packageName);
     }
@@ -1294,7 +1294,7 @@ class RollbackManagerServiceImpl extends IRollbackManager.Stub {
     private SparseIntArray getExtensionVersions() {
         // This list must be updated whenever the current API level is increased, or should be
         // replaced when we have another way of determining the relevant SDK versions.
-        final int[] relevantSdkVersions = { Build.VERSION_CODES.R };
+        final int[] relevantSdkVersions = { Build.VERSION_CODES.R, Build.VERSION_CODES.S };
 
         SparseIntArray result = new SparseIntArray(relevantSdkVersions.length);
         for (int i = 0; i < relevantSdkVersions.length; i++) {

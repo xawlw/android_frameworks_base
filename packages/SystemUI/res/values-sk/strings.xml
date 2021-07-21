@@ -551,7 +551,7 @@
     <string name="disconnect_vpn" msgid="26286850045344557">"Odpojiť sieť VPN"</string>
     <string name="monitoring_button_view_policies" msgid="3869724835853502410">"Zobraziť pravidlá"</string>
     <string name="monitoring_description_named_management" msgid="505833016545056036">"Toto zariadenie patrí organizácii <xliff:g id="ORGANIZATION_NAME">%1$s</xliff:g>.\n\nVáš správca IT môže sledovať a spravovať nastavenia, podnikový prístup, aplikácie, údaje spojené s vaším zariadení a informácie o jeho polohe.\n\nViac sa dozviete od správcu IT."</string>
-    <string name="monitoring_description_management" msgid="4308879039175729014">"Toto zariadenie patrí vašej organizácii.\n\nVáš správca IT môže sledovať a spravovať nastavenia, podnikový prístup, aplikácie, údaje spojené s vaším zariadením a informácie o jeho polohe.\n\n. Viac sa dozviete od správcu IT."</string>
+    <string name="monitoring_description_management" msgid="4308879039175729014">"Toto zariadenie patrí vašej organizácii.\n\nVáš správca IT môže sledovať a spravovať nastavenia, podnikový prístup, aplikácie, údaje spojené s vaším zariadením a informácie o jeho polohe.\n\nViac sa dozviete od správcu IT."</string>
     <string name="monitoring_description_management_ca_certificate" msgid="7785013130658110130">"Organizácia nainštalovala pre toto zariadenie certifikačnú autoritu. Zabezpečená sieťová premávka môže byť sledovaná či upravená."</string>
     <string name="monitoring_description_managed_profile_ca_certificate" msgid="7904323416598435647">"Organizácia nainštalovala pre váš pracovný profil certifikačnú autoritu. Zabezpečená sieťová premávka môže byť sledovaná či upravená."</string>
     <string name="monitoring_description_ca_certificate" msgid="448923057059097497">"V tomto zariadení je nainštalovaná certifikačná autorita. Zabezpečená sieťová premávka môže byť sledovaná či upravená."</string>
@@ -999,7 +999,7 @@
     <string name="auto_saver_enabled_text" msgid="7889491183116752719">"Keď batéria klesne pod <xliff:g id="PERCENTAGE">%d</xliff:g> %%, automaticky sa aktivujte Šetrič batérie."</string>
     <string name="open_saver_setting_action" msgid="2111461909782935190">"Nastavenia"</string>
     <string name="auto_saver_okay_action" msgid="7815925750741935386">"Dobre"</string>
-    <string name="heap_dump_tile_name" msgid="2464189856478823046">"Dump SysUI Heap"</string>
+    <string name="heap_dump_tile_name" msgid="2464189856478823046">"V7pis haldy SysUI"</string>
     <string name="ongoing_privacy_chip_content_single_app" msgid="2969750601815230385">"<xliff:g id="APP">%1$s</xliff:g> používa zoznam <xliff:g id="TYPES_LIST">%2$s</xliff:g>."</string>
     <string name="ongoing_privacy_chip_content_multiple_apps" msgid="8341216022442383954">"Aplikácie používajú zoznam <xliff:g id="TYPES_LIST">%s</xliff:g>."</string>
     <string name="ongoing_privacy_dialog_separator" msgid="1866222499727706187">", "</string>

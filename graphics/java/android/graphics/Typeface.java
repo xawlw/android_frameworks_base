@@ -1196,13 +1196,11 @@ public class Typeface {
 
     /** @hide */
     public boolean isSupportedAxes(int axis) {
-        if (mSupportedAxes == null) {
-            synchronized (this) {
+        synchronized (this) {
+            if (mSupportedAxes == null) {
+                mSupportedAxes = nativeGetSupportedAxes(native_instance);
                 if (mSupportedAxes == null) {
-                    mSupportedAxes = nativeGetSupportedAxes(native_instance);
-                    if (mSupportedAxes == null) {
-                        mSupportedAxes = EMPTY_AXES;
-                    }
+                    mSupportedAxes = EMPTY_AXES;
                 }
             }
         }
@@ -1217,7 +1215,7 @@ public class Typeface {
             long native_instance, List<FontVariationAxis> axes);
     @UnsupportedAppUsage
     private static native long nativeCreateWeightAlias(long native_instance, int weight);
-    @UnsupportedAppUsage
+    @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
     private static native long nativeCreateFromArray(long[] familyArray, int weight, int italic);
     private static native int[] nativeGetSupportedAxes(long native_instance);
 

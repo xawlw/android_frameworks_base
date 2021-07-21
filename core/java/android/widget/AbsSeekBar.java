@@ -29,6 +29,7 @@ import android.graphics.PorterDuff;
 import android.graphics.Rect;
 import android.graphics.Region.Op;
 import android.graphics.drawable.Drawable;
+import android.os.Build;
 import android.os.Bundle;
 import android.util.AttributeSet;
 import android.view.KeyEvent;
@@ -864,7 +865,7 @@ public abstract class AbsSeekBar extends ProgressBar {
     /**
      * Draw the thumb.
      */
-    @UnsupportedAppUsage
+    @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
     void drawThumb(Canvas canvas) {
         if (mThumb != null) {
             final int saveCount = canvas.save();
@@ -1041,7 +1042,7 @@ public abstract class AbsSeekBar extends ProgressBar {
     }
 
     /**
-     * This is called when the user either releases his touch or the touch is
+     * This is called when the user either releases their touch or the touch is
      * canceled.
      */
     void onStopTrackingTouch() {

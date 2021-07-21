@@ -23,7 +23,6 @@ import android.annotation.Nullable;
 import android.annotation.RequiresPermission;
 import android.annotation.SystemApi;
 import android.annotation.SystemService;
-import android.annotation.TestApi;
 import android.app.ActivityThread;
 import android.compat.annotation.UnsupportedAppUsage;
 import android.content.Context;
@@ -229,6 +228,8 @@ public abstract class Vibrator {
     /**
      * Vibrate constantly for the specified period of time.
      *
+     * <p>The app should be in foreground for the vibration to happen.</p>
+     *
      * @param milliseconds The number of milliseconds to vibrate.
      * @deprecated Use {@link #vibrate(VibrationEffect)} instead.
      */
@@ -240,6 +241,9 @@ public abstract class Vibrator {
 
     /**
      * Vibrate constantly for the specified period of time.
+     *
+     * <p>The app should be in foreground for the vibration to happen. Background apps should
+     * specify a ringtone, notification or alarm usage in order to vibrate.</p>
      *
      * @param milliseconds The number of milliseconds to vibrate.
      * @param attributes   {@link AudioAttributes} corresponding to the vibration. For example,
@@ -275,6 +279,8 @@ public abstract class Vibrator {
      * to start the repeat, or -1 to disable repeating.
      * </p>
      *
+     * <p>The app should be in foreground for the vibration to happen.</p>
+     *
      * @param pattern an array of longs of times for which to turn the vibrator on or off.
      * @param repeat  the index into pattern at which to repeat, or -1 if
      *                you don't want to repeat.
@@ -299,6 +305,9 @@ public abstract class Vibrator {
      * To cause the pattern to repeat, pass the index into the pattern array at which
      * to start the repeat, or -1 to disable repeating.
      * </p>
+     *
+     * <p>The app should be in foreground for the vibration to happen. Background apps should
+     * specify a ringtone, notification or alarm usage in order to vibrate.</p>
      *
      * @param pattern    an array of longs of times for which to turn the vibrator on or off.
      * @param repeat     the index into pattern at which to repeat, or -1 if
@@ -327,11 +336,30 @@ public abstract class Vibrator {
         }
     }
 
+    /**
+     * Vibrate with a given effect.
+     *
+     * <p>The app should be in foreground for the vibration to happen.</p>
+     *
+     * @param vibe {@link VibrationEffect} describing the vibration to be performed.
+     */
     @RequiresPermission(android.Manifest.permission.VIBRATE)
     public void vibrate(VibrationEffect vibe) {
         vibrate(vibe, null);
     }
 
+    /**
+     * Vibrate with a given effect.
+     *
+     * <p>The app should be in foreground for the vibration to happen. Background apps should
+     * specify a ringtone, notification or alarm usage in order to vibrate.</p>
+     *
+     * @param vibe       {@link VibrationEffect} describing the vibration to be performed.
+     * @param attributes {@link AudioAttributes} corresponding to the vibration. For example,
+     *                   specify {@link AudioAttributes#USAGE_ALARM} for alarm vibrations or
+     *                   {@link AudioAttributes#USAGE_NOTIFICATION_RINGTONE} for
+     *                   vibrations associated with incoming calls.
+     */
     @RequiresPermission(android.Manifest.permission.VIBRATE)
     public void vibrate(VibrationEffect vibe, AudioAttributes attributes) {
         vibrate(Process.myUid(), mPackageName, vibe, null, attributes);
@@ -453,7 +481,6 @@ public abstract class Vibrator {
      * @hide
      */
     @SystemApi
-    @TestApi
     @RequiresPermission(android.Manifest.permission.ACCESS_VIBRATOR_STATE)
     public boolean isVibrating() {
         return false;
@@ -467,7 +494,6 @@ public abstract class Vibrator {
     * @hide
     */
     @SystemApi
-    @TestApi
     public interface OnVibratorStateChangedListener  {
         /**
          * Called when the vibrator state has changed.
@@ -486,7 +512,6 @@ public abstract class Vibrator {
      * @hide
      */
     @SystemApi
-    @TestApi
     @RequiresPermission(android.Manifest.permission.ACCESS_VIBRATOR_STATE)
     public void addVibratorStateListener(@NonNull OnVibratorStateChangedListener listener) {
     }
@@ -500,7 +525,6 @@ public abstract class Vibrator {
      * @hide
      */
     @SystemApi
-    @TestApi
     @RequiresPermission(android.Manifest.permission.ACCESS_VIBRATOR_STATE)
     public void addVibratorStateListener(
             @NonNull @CallbackExecutor Executor executor,
@@ -515,7 +539,6 @@ public abstract class Vibrator {
      * @hide
      */
     @SystemApi
-    @TestApi
     @RequiresPermission(android.Manifest.permission.ACCESS_VIBRATOR_STATE)
     public void removeVibratorStateListener(@NonNull OnVibratorStateChangedListener listener) {
     }

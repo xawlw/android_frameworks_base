@@ -21,6 +21,8 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.net.ConnectivityManager;
+import android.os.Handler;
+import android.os.Looper;
 import android.os.UserManager;
 import android.os.UserHandle;
 import android.provider.Settings;
@@ -34,37 +36,61 @@ import com.android.internal.logging.MetricsLogger;
 import com.android.internal.logging.nano.MetricsProto.MetricsEvent;
 import com.android.systemui.R;
 import com.android.systemui.broadcast.BroadcastDispatcher;
+import com.android.systemui.dagger.qualifiers.Background;
+import com.android.systemui.dagger.qualifiers.Main;
 import com.android.systemui.plugins.ActivityStarter;
 import com.android.systemui.plugins.qs.QSTile.BooleanState;
+import com.android.systemui.plugins.statusbar.StatusBarStateController;
 import com.android.systemui.qs.GlobalSetting;
 import com.android.systemui.qs.QSHost;
+import com.android.systemui.qs.logging.QSLogger;
 import com.android.systemui.qs.tileimpl.QSTileImpl;
 import com.android.systemui.statusbar.policy.KeyguardStateController;
 
 import javax.inject.Inject;
 
+import dagger.Lazy;
+
 /** Quick settings tile: Airplane mode **/
 public class AirplaneModeTile extends QSTileImpl<BooleanState> {
     private final Icon mIcon = ResourceIcon.get(com.android.internal.R.drawable.ic_qs_airplane);
     private final GlobalSetting mSetting;
-    private final ActivityStarter mActivityStarter;
     private final BroadcastDispatcher mBroadcastDispatcher;
+    private final Lazy<ConnectivityManager> mLazyConnectivityManager;
 
     private final KeyguardStateController mKeyguard;
 
     private boolean mListening;
 
     @Inject
+<<<<<<< HEAD
     public AirplaneModeTile(QSHost host, ActivityStarter activityStarter,
             BroadcastDispatcher broadcastDispatcher,
             KeyguardStateController keyguardStateController) {
         super(host);
         mActivityStarter = activityStarter;
+=======
+    public AirplaneModeTile(
+            QSHost host,
+            @Background Looper backgroundLooper,
+            @Main Handler mainHandler,
+            MetricsLogger metricsLogger,
+            StatusBarStateController statusBarStateController,
+            ActivityStarter activityStarter,
+            QSLogger qsLogger,
+            BroadcastDispatcher broadcastDispatcher,
+            Lazy<ConnectivityManager> lazyConnectivityManager
+    ) {
+        super(host, backgroundLooper, mainHandler, metricsLogger, statusBarStateController,
+                activityStarter, qsLogger);
+>>>>>>> 1a7b0835ced351de3f8f73b29a3b40996d335e65
         mBroadcastDispatcher = broadcastDispatcher;
+        mLazyConnectivityManager = lazyConnectivityManager;
 
         mSetting = new GlobalSetting(mContext, mHandler, Global.AIRPLANE_MODE_ON) {
             @Override
             protected void handleValueChanged(int value) {
+                // mHandler is the background handler so calling this is OK
                 handleRefreshState(value);
             }
         };
@@ -108,9 +134,7 @@ public class AirplaneModeTile extends QSTileImpl<BooleanState> {
     }
 
     private void setEnabled(boolean enabled) {
-        final ConnectivityManager mgr =
-                (ConnectivityManager) mContext.getSystemService(Context.CONNECTIVITY_SERVICE);
-        mgr.setAirplaneMode(enabled);
+        mLazyConnectivityManager.get().setAirplaneMode(enabled);
     }
 
     private boolean isUnlockingRequired() {

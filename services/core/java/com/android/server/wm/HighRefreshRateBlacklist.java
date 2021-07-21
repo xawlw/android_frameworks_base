@@ -27,12 +27,12 @@ import android.util.ArraySet;
 import com.android.internal.R;
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.internal.os.BackgroundThread;
-import com.android.server.wm.utils.DeviceConfigInterface;
+import com.android.server.utils.DeviceConfigInterface;
 
 import java.io.PrintWriter;
 
 /**
- * A Blacklist for packages that should force the display out of high refresh rate.
+ * A Denylist for packages that should force the display out of high refresh rate.
  */
 class HighRefreshRateBlacklist {
 
@@ -72,7 +72,7 @@ class HighRefreshRateBlacklist {
                 }
             } else {
                 // If there's no config, or the config has been deleted, fallback to the device's
-                // default blacklist
+                // default denylist
                 for (String pkg : mDefaultBlacklist) {
                     mBlacklistedPackages.add(pkg);
                 }

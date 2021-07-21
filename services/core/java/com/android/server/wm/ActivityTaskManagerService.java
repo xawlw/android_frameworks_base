@@ -312,9 +312,10 @@ public class ActivityTaskManagerService extends IActivityTaskManager.Stub {
     private static final String TAG_CONFIGURATION = TAG + POSTFIX_CONFIGURATION;
 
     // How long we wait until we timeout on key dispatching.
-    public static final int KEY_DISPATCHING_TIMEOUT_MS = 5 * 1000;
+    public static final int KEY_DISPATCHING_TIMEOUT_MS = 5 * 1000 * Build.HW_TIMEOUT_MULTIPLIER;
     // How long we wait until we timeout on key dispatching during instrumentation.
-    static final int INSTRUMENTATION_KEY_DISPATCHING_TIMEOUT_MS = 60 * 1000;
+    static final int INSTRUMENTATION_KEY_DISPATCHING_TIMEOUT_MS =
+            60 * 1000 * Build.HW_TIMEOUT_MULTIPLIER;
     // How long we permit background activity starts after an activity in the process
     // started or finished.
     static final long ACTIVITY_BG_START_GRACE_PERIOD_MS = 10 * 1000;
@@ -3334,9 +3335,8 @@ public class ActivityTaskManagerService extends IActivityTaskManager.Stub {
                 }
 
                 final ActivityStack stack = r.getRootTask();
-                final Task task = stack.getDisplayArea().createStack(stack.getWindowingMode(),
-                        stack.getActivityType(), !ON_TOP, ainfo, intent,
-                        false /* createdByOrganizer */);
+                final Task task = new ActivityStack(this, stack.getDisplayArea().getNextStackId(),
+                        stack.getActivityType(), ainfo, intent, false /* createdByOrganizer */);
 
                 if (!mRecentTasks.addToBottom(task)) {
                     // The app has too many tasks already and we can't add any more

@@ -25,6 +25,7 @@ import android.content.IntentFilter;
 import android.content.res.TypedArray;
 import android.database.ContentObserver;
 import android.graphics.Rect;
+import android.icu.text.DateTimePatternGenerator;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Parcelable;
@@ -52,8 +53,6 @@ import com.android.systemui.plugins.DarkIconDispatcher.DarkReceiver;
 import com.android.systemui.settings.CurrentUserTracker;
 import com.android.systemui.statusbar.CommandQueue;
 import com.android.systemui.statusbar.policy.ConfigurationController.ConfigurationListener;
-
-import libcore.icu.LocaleData;
 
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
@@ -257,6 +256,11 @@ public class Clock extends TextView implements DemoMode, CommandQueue.Callbacks,
             // The receiver will return immediately if the view does not have a Handler yet.
             mBroadcastDispatcher.registerReceiverWithHandler(mIntentReceiver, filter,
                     Dependency.get(Dependency.TIME_TICK_HANDLER), UserHandle.ALL);
+<<<<<<< HEAD
+=======
+            Dependency.get(TunerService.class).addTunable(this, CLOCK_SECONDS,
+                    StatusBarIconController.ICON_HIDE_LIST);
+>>>>>>> 1a7b0835ced351de3f8f73b29a3b40996d335e65
             mCommandQueue.addCallback(this);
             if (mShowDark) {
                 Dependency.get(DarkIconDispatcher.class).addDarkReceiver(this);
@@ -380,6 +384,21 @@ public class Clock extends TextView implements DemoMode, CommandQueue.Callbacks,
     }
 
     @Override
+<<<<<<< HEAD
+=======
+    public void onTuningChanged(String key, String newValue) {
+        if (CLOCK_SECONDS.equals(key)) {
+            mShowSeconds = TunerService.parseIntegerSwitch(newValue, false);
+            updateShowSeconds();
+        } else if (StatusBarIconController.ICON_HIDE_LIST.equals(key)) {
+            setClockVisibleByUser(!StatusBarIconController.getIconHideList(getContext(), newValue)
+                    .contains("clock"));
+            updateClockVisibility();
+        }
+    }
+
+    @Override
+>>>>>>> 1a7b0835ced351de3f8f73b29a3b40996d335e65
     public void disable(int displayId, int state1, int state2, boolean animate) {
         if (displayId != getDisplay().getDisplayId()) {
             return;
@@ -457,20 +476,21 @@ public class Clock extends TextView implements DemoMode, CommandQueue.Callbacks,
     private final CharSequence getSmallTime() {
         Context context = getContext();
         boolean is24 = DateFormat.is24HourFormat(context, mCurrentUserId);
-        LocaleData d = LocaleData.get(context.getResources().getConfiguration().locale);
+        DateTimePatternGenerator dtpg = DateTimePatternGenerator.getInstance(
+                context.getResources().getConfiguration().locale);
 
         final char MAGIC1 = '\uEF00';
         final char MAGIC2 = '\uEF01';
 
         SimpleDateFormat sdf;
         String format = mShowSeconds
-                ? is24 ? d.timeFormat_Hms : d.timeFormat_hms
-                : is24 ? d.timeFormat_Hm : d.timeFormat_hm;
+                ? is24 ? dtpg.getBestPattern("Hms") : dtpg.getBestPattern("hms")
+                : is24 ? dtpg.getBestPattern("Hm") : dtpg.getBestPattern("hm");
         if (!format.equals(mClockFormatString)) {
             mContentDescriptionFormat = new SimpleDateFormat(format);
             /*
              * Search for an unquoted "a" in the format string, so we can
-             * add dummy characters around it to let us find it again after
+             * add marker characters around it to let us find it again after
              * formatting and change its size.
              */
             if (mAmPmStyle != AM_PM_STYLE_NORMAL) {

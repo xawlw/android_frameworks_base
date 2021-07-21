@@ -88,7 +88,6 @@ import android.graphics.ImageDecoder;
 import android.hardware.display.DisplayManagerGlobal;
 import android.inputmethodservice.InputMethodService;
 import android.net.ConnectivityManager;
-import android.net.IConnectivityManager;
 import android.net.Proxy;
 import android.net.Uri;
 import android.os.AsyncTask;
@@ -184,6 +183,7 @@ import com.android.org.conscrypt.OpenSSLSocketImpl;
 import com.android.org.conscrypt.TrustedCertificateStore;
 import com.android.server.am.MemInfoDumpProto;
 
+import dalvik.system.AppSpecializationHooks;
 import dalvik.system.CloseGuard;
 import dalvik.system.VMDebug;
 import dalvik.system.VMRuntime;
@@ -345,7 +345,7 @@ public final class ActivityThread extends ClientTransactionHandler {
     @UnsupportedAppUsage
     AppBindData mBoundApplication;
     Profiler mProfiler;
-    @UnsupportedAppUsage
+    @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
     int mCurDefaultDisplayDpi;
     @UnsupportedAppUsage
     boolean mDensityCompatMode;
@@ -812,7 +812,7 @@ public final class ActivityThread extends ClientTransactionHandler {
         boolean trackAllocation;
         @UnsupportedAppUsage
         boolean restrictedBackupMode;
-        @UnsupportedAppUsage
+        @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
         boolean persistent;
         Configuration config;
         @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.P, trackingBug = 115609023)
@@ -1123,7 +1123,7 @@ public final class ActivityThread extends ClientTransactionHandler {
             InetAddress.clearDnsCache();
             // Allow libcore to perform the necessary actions as it sees fit upon a network
             // configuration change.
-            NetworkEventDispatcher.getInstance().onNetworkConfigurationChanged();
+            NetworkEventDispatcher.getInstance().dispatchNetworkConfigurationChange();
         }
 
         public void updateHttpProxy() {
@@ -2283,7 +2283,7 @@ public final class ActivityThread extends ClientTransactionHandler {
         return null;
     }
 
-    @UnsupportedAppUsage
+    @UnsupportedAppUsage(trackingBug = 171933273)
     public final LoadedApk getPackageInfo(ApplicationInfo ai, CompatibilityInfo compatInfo,
             int flags) {
         boolean includeCode = (flags&Context.CONTEXT_INCLUDE_CODE) != 0;
@@ -2770,7 +2770,7 @@ public final class ActivityThread extends ClientTransactionHandler {
                         memInfo.getTotalPrivateDirty(),
                         memInfo.getTotalPrivateClean(),
                         memInfo.hasSwappedOutPss ? memInfo.getTotalSwappedOutPss() :
-                        memInfo.getTotalSwappedOut(), memInfo.getTotalPss(),
+                        memInfo.getTotalSwappedOut(), memInfo.getTotalRss(),
                         nativeMax+dalvikMax,
                         nativeAllocated+dalvikAllocated, nativeFree+dalvikFree);
             }
@@ -3031,7 +3031,7 @@ public final class ActivityThread extends ClientTransactionHandler {
         proto.end(asToken);
     }
 
-    @UnsupportedAppUsage
+    @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
     public void registerOnActivityPausedListener(Activity activity,
             OnActivityPausedListener listener) {
         synchronized (mOnPauseListeners) {
@@ -3044,7 +3044,7 @@ public final class ActivityThread extends ClientTransactionHandler {
         }
     }
 
-    @UnsupportedAppUsage
+    @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
     public void unregisterOnActivityPausedListener(Activity activity,
             OnActivityPausedListener listener) {
         synchronized (mOnPauseListeners) {
@@ -4047,7 +4047,7 @@ public final class ActivityThread extends ClientTransactionHandler {
     private void handleCreateBackupAgent(CreateBackupAgentData data) {
         if (DEBUG_BACKUP) Slog.v(TAG, "handleCreateBackupAgent: " + data);
 
-        // Sanity check the requested target package's uid against ours
+        // Validity check the requested target package's uid against ours
         try {
             PackageInfo requestedPackage = getPackageManager().getPackageInfo(
                     data.appInfo.packageName, 0, UserHandle.myUserId());
@@ -6386,12 +6386,15 @@ public final class ActivityThread extends ClientTransactionHandler {
             VMDebug.setAllocTrackerStackDepth(Integer.parseInt(property));
         }
         if (data.trackAllocation) {
-            DdmVmInternal.enableRecentAllocations(true);
+            DdmVmInternal.setRecentAllocationsTrackingEnabled(true);
         }
         // Note when this process has started.
         Process.setStartTimes(SystemClock.elapsedRealtime(), SystemClock.uptimeMillis());
 
         AppCompatCallbacks.install(data.disabledCompatChanges);
+        // Let libcore handle any compat changes after installing the list of compat changes.
+        AppSpecializationHooks.handleCompatChangesBeforeBindingApplication();
+
         mBoundApplication = data;
         mConfiguration = new Configuration(data.config);
         mCompatConfiguration = new Configuration(data.config);
@@ -6547,25 +6550,6 @@ public final class ActivityThread extends ClientTransactionHandler {
         HardwareRenderer.setDebuggingEnabled(isAppDebuggable || Build.IS_ENG);
         HardwareRenderer.setPackageName(data.appInfo.packageName);
 
-        /**
-         * Initialize the default http proxy in this process for the reasons we set the time zone.
-         */
-        Trace.traceBegin(Trace.TRACE_TAG_ACTIVITY_MANAGER, "Setup proxies");
-        final IBinder b = ServiceManager.getService(Context.CONNECTIVITY_SERVICE);
-        if (b != null) {
-            // In pre-boot mode (doing initial launch to collect password), not
-            // all system is up.  This includes the connectivity service, so don't
-            // crash if we can't get it.
-            final IConnectivityManager service = IConnectivityManager.Stub.asInterface(b);
-            try {
-                Proxy.setHttpProxySystemProperty(service.getProxyForNetwork(null));
-            } catch (RemoteException e) {
-                Trace.traceEnd(Trace.TRACE_TAG_ACTIVITY_MANAGER);
-                throw e.rethrowFromSystemServer();
-            }
-        }
-        Trace.traceEnd(Trace.TRACE_TAG_ACTIVITY_MANAGER);
-
         // Instrumentation info affects the class loader, so load it before
         // setting up the app context.
         final InstrumentationInfo ii;
@@ -6603,6 +6587,23 @@ public final class ActivityThread extends ClientTransactionHandler {
         final ContextImpl appContext = ContextImpl.createAppContext(this, data.info);
         updateLocaleListFromAppContext(appContext,
                 mResourcesManager.getConfiguration().getLocales());
+
+        // Initialize the default http proxy in this process.
+        Trace.traceBegin(Trace.TRACE_TAG_ACTIVITY_MANAGER, "Setup proxies");
+        try {
+            // In pre-boot mode (doing initial launch to collect password), not all system is up.
+            // This includes the connectivity service, so trying to obtain ConnectivityManager at
+            // that point would return null. Check whether the ConnectivityService is available, and
+            // avoid crashing with a NullPointerException if it is not.
+            final IBinder b = ServiceManager.getService(Context.CONNECTIVITY_SERVICE);
+            if (b != null) {
+                final ConnectivityManager cm =
+                        appContext.getSystemService(ConnectivityManager.class);
+                Proxy.setHttpProxyConfiguration(cm.getDefaultProxy());
+            }
+        } finally {
+            Trace.traceEnd(Trace.TRACE_TAG_ACTIVITY_MANAGER);
+        }
 
         if (!Process.isIsolated()) {
             final int oldMask = StrictMode.allowThreadDiskWritesMask();
@@ -7425,8 +7426,8 @@ public final class ActivityThread extends ClientTransactionHandler {
     }
 
     public static void updateHttpProxy(@NonNull Context context) {
-        final ConnectivityManager cm = ConnectivityManager.from(context);
-        Proxy.setHttpProxySystemProperty(cm.getDefaultProxy());
+        final ConnectivityManager cm = context.getSystemService(ConnectivityManager.class);
+        Proxy.setHttpProxyConfiguration(cm.getDefaultProxy());
     }
 
     @UnsupportedAppUsage

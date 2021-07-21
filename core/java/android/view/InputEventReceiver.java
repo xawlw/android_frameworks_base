@@ -17,6 +17,7 @@
 package android.view;
 
 import android.compat.annotation.UnsupportedAppUsage;
+import android.os.Build;
 import android.os.IBinder;
 import android.os.Looper;
 import android.os.MessageQueue;
@@ -123,7 +124,7 @@ public abstract class InputEventReceiver {
      *
      * @param event The input event that was received.
      */
-    @UnsupportedAppUsage
+    @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
     public void onInputEvent(InputEvent event) {
         finishInputEvent(event, false);
     }
@@ -215,7 +216,7 @@ public abstract class InputEventReceiver {
 
     // Called from native code.
     @SuppressWarnings("unused")
-    @UnsupportedAppUsage
+    @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
     private void dispatchInputEvent(int seq, InputEvent event) {
         mSeqMap.put(event.getSequenceNumber(), seq);
         onInputEvent(event);

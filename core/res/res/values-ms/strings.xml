@@ -57,7 +57,7 @@
     <string name="imei" msgid="2157082351232630390">"IMEI"</string>
     <string name="meid" msgid="3291227361605924674">"MEID"</string>
     <string name="ClipMmi" msgid="4110549342447630629">"ID Pemanggil Masuk"</string>
-    <string name="ClirMmi" msgid="4702929460236547156">"ID Pemanggil Keluar"</string>
+    <string name="ClirMmi" msgid="6752346475055446417">"Sembunyikan ID Pemanggil Keluar"</string>
     <string name="ColpMmi" msgid="4736462893284419302">"ID Laluan yang disambungkan"</string>
     <string name="ColrMmi" msgid="5889782479745764278">"Sekatan ID Laluan yang disambungkan"</string>
     <string name="CfMmi" msgid="8390012691099787178">"Pemajuan panggilan"</string>
@@ -349,6 +349,8 @@
     <string name="permdesc_receiveMms" msgid="958102423732219710">"Membenarkan apl menerima dan memproses mesej MMS. Ini bermakna apl boleh memantau atau memadam mesej yang dihantar ke peranti anda tanpa menunjukkannya kepada anda."</string>
     <string name="permlab_bindCellBroadcastService" msgid="586746677002040651">"Kirim semula mesej siaran sel"</string>
     <string name="permdesc_bindCellBroadcastService" msgid="6540910200973641606">"Membenarkan apl terikat pada modul siaran sel untuk mengirim semula mesej siaran sel apabila diterima. Makluman siaran sel dihantar di sesetengah lokasi untuk memberi amaran kepada anda tentang situasi kecemasan. Apl hasad boleh mengganggu prestasi atau operasi peranti anda apabila siaran sel kecemasan diterima."</string>
+    <string name="permlab_manageOngoingCalls" msgid="281244770664231782">"Urus panggilan yang sedang berjalan"</string>
+    <string name="permdesc_manageOngoingCalls" msgid="7003138133829915265">"Benarkan apl melihat butiran panggilan yang sedang berjalan pada peranti anda dan mengawal panggilan ini."</string>
     <string name="permlab_readCellBroadcasts" msgid="5869884450872137693">"baca mesej siaran sel"</string>
     <string name="permdesc_readCellBroadcasts" msgid="672513437331980168">"Membolehkan apl membaca mesej siaran sel yang diterima oleh peranti anda. Isyarat siaran sel dihantar di beberapa lokasi untuk memberi amaran kepada anda tentang situasi kecemasan. Apl hasad boleh mengganggu prestasi atau operasi peranti anda apabila siaran sel kecemasan diterima."</string>
     <string name="permlab_subscribedFeedsRead" msgid="217624769238425461">"baca suapan langganan"</string>
@@ -567,11 +569,11 @@
   <string-array name="fingerprint_error_vendor">
   </string-array>
     <string name="fingerprint_icon_content_description" msgid="4741068463175388817">"Ikon cap jari"</string>
-    <string name="permlab_manageFace" msgid="4569549381889283282">"urus perkakasan wajah buka kunci"</string>
+    <string name="permlab_manageFace" msgid="4569549381889283282">"urus perkakasan buka kunci wajah"</string>
     <string name="permdesc_manageFace" msgid="6204569688492710471">"Membenarkan apl menggunakan kaedah untuk menambahkan dan memadamkan templat wajah untuk digunakan."</string>
-    <string name="permlab_useFaceAuthentication" msgid="1011430526454859030">"gunakan perkakasan wajah buka kunci"</string>
-    <string name="permdesc_useFaceAuthentication" msgid="3115697017684668012">"Membenarkan apl menggunakan perkakasan wajah buka kunci untuk pengesahan"</string>
-    <string name="face_recalibrate_notification_name" msgid="6006095897989257026">"Wajah buka kunci"</string>
+    <string name="permlab_useFaceAuthentication" msgid="1011430526454859030">"gunakan perkakasan buka kunci wajah"</string>
+    <string name="permdesc_useFaceAuthentication" msgid="3115697017684668012">"Membenarkan apl menggunakan perkakasan buka kunci wajah untuk pengesahan"</string>
+    <string name="face_recalibrate_notification_name" msgid="6006095897989257026">"Buka kunci wajah"</string>
     <string name="face_recalibrate_notification_title" msgid="5944930528030496897">"Daftarkan semula wajah anda"</string>
     <string name="face_recalibrate_notification_content" msgid="892757485125249962">"Untuk meningkatkan pengecaman, sila daftarkan semula wajah anda"</string>
     <string name="face_acquired_insufficient" msgid="2150805835949162453">"Gagal menangkap data wajah dgn tepat. Cuba lagi."</string>
@@ -597,15 +599,15 @@
   <string-array name="face_acquired_vendor">
   </string-array>
     <string name="face_error_hw_not_available" msgid="5085202213036026288">"Tdk dpt sahkan wajah. Perkakasan tidak tersedia."</string>
-    <string name="face_error_timeout" msgid="522924647742024699">"Cuba wajah buka kunci sekali lagi."</string>
+    <string name="face_error_timeout" msgid="522924647742024699">"Cuba buka kunci wajah sekali lagi."</string>
     <string name="face_error_no_space" msgid="5649264057026021723">"Tdk dpt menyimpan data wajah baharu. Padamkan yg lama dahulu."</string>
     <string name="face_error_canceled" msgid="2164434737103802131">"Pengendalian wajah dibatalkan."</string>
-    <string name="face_error_user_canceled" msgid="8553045452825849843">"Wajah buka kunci dibatalkan oleh pengguna."</string>
+    <string name="face_error_user_canceled" msgid="8553045452825849843">"Buka kunci wajah dibatalkan oleh pengguna."</string>
     <string name="face_error_lockout" msgid="7864408714994529437">"Terlalu banyak percubaan. Cuba sebentar lagi."</string>
-    <string name="face_error_lockout_permanent" msgid="8277853602168960343">"Terlalu banyak percubaan. Wajah buka kunci dilumpuhkan."</string>
+    <string name="face_error_lockout_permanent" msgid="8277853602168960343">"Terlalu banyak percubaan. Buka kunci wajah dilumpuhkan."</string>
     <string name="face_error_unable_to_process" msgid="5723292697366130070">"Tidak dapat mengesahkan wajah. Cuba lagi."</string>
-    <string name="face_error_not_enrolled" msgid="7369928733504691611">"Anda belum menyediakan wajah buka kunci."</string>
-    <string name="face_error_hw_not_present" msgid="1070600921591729944">"Wajah buka kunci tidak disokong pada peranti ini."</string>
+    <string name="face_error_not_enrolled" msgid="7369928733504691611">"Anda belum menyediakan buka kunci wajah."</string>
+    <string name="face_error_hw_not_present" msgid="1070600921591729944">"Buka kunci wajah tidak disokong pada peranti ini."</string>
     <string name="face_error_security_update_required" msgid="5076017208528750161">"Penderia dilumpuhkan sementara."</string>
     <string name="face_name_template" msgid="3877037340223318119">"Wajah <xliff:g id="FACEID">%d</xliff:g>"</string>
   <string-array name="face_error_vendor">
@@ -905,7 +907,7 @@
     <string name="keyguard_accessibility_expand_lock_area" msgid="4215280881346033434">"Kembangkan bahagian buka kunci."</string>
     <string name="keyguard_accessibility_slide_unlock" msgid="2968195219692413046">"Buka kunci luncur."</string>
     <string name="keyguard_accessibility_pattern_unlock" msgid="8669128146589233293">"Buka kunci corak."</string>
-    <string name="keyguard_accessibility_face_unlock" msgid="632407612842329815">"Wajah Buka Kunci"</string>
+    <string name="keyguard_accessibility_face_unlock" msgid="632407612842329815">"Buka Kunci Wajah"</string>
     <string name="keyguard_accessibility_pin_unlock" msgid="4020864007967340068">"Buka kunci pin."</string>
     <string name="keyguard_accessibility_sim_pin_unlock" msgid="4895939120871890557">"Buka kunci Pin Sim."</string>
     <string name="keyguard_accessibility_sim_puk_unlock" msgid="3459003464041899101">"Buka kunci Puk Sim."</string>
@@ -1103,7 +1105,7 @@
     <string name="redo" msgid="7231448494008532233">"Buat semula"</string>
     <string name="autofill" msgid="511224882647795296">"Autolengkap"</string>
     <string name="textSelectionCABTitle" msgid="5151441579532476940">"Pemilihan teks"</string>
-    <string name="addToDictionary" msgid="8041821113480950096">"Tambah ke kamus"</string>
+    <string name="addToDictionary" msgid="8041821113480950096">"Tambahkan pada kamus"</string>
     <string name="deleteText" msgid="4200807474529938112">"Padam"</string>
     <string name="inputMethod" msgid="1784759500516314751">"Kaedah input"</string>
     <string name="editTextMenuTitle" msgid="857666911134482176">"Tindakan teks"</string>
@@ -1183,7 +1185,7 @@
     <string name="unsupported_display_size_show" msgid="980129850974919375">"Sentiasa tunjukkan"</string>
     <string name="unsupported_compile_sdk_message" msgid="7326293500707890537">"<xliff:g id="APP_NAME">%1$s</xliff:g> telah dibina untuk versi yang tidak serasi dengan OS Android dan mungkin menunjukkan gelagat yang tidak dijangka. Versi kemas kini apl mungkin tersedia."</string>
     <string name="unsupported_compile_sdk_show" msgid="1601210057960312248">"Sentiasa tunjukkan"</string>
-    <string name="unsupported_compile_sdk_check_update" msgid="1103639989147664456">"Semak kemas kini"</string>
+    <string name="unsupported_compile_sdk_check_update" msgid="1103639989147664456">"Semak kemaskinian"</string>
     <string name="smv_application" msgid="3775183542777792638">"Apl <xliff:g id="APPLICATION">%1$s</xliff:g> (proses <xliff:g id="PROCESS">%2$s</xliff:g>) telah melanggar dasar Mod Tegasnya sendiri."</string>
     <string name="smv_process" msgid="1398801497130695446">"Proses <xliff:g id="PROCESS">%1$s</xliff:g> telah melanggar dasar Mod Tegasnya sendiri."</string>
     <string name="android_upgrading_title" product="default" msgid="7279077384220829683">"Telefon sedang mengemas kini…"</string>
@@ -1340,11 +1342,14 @@
     <string name="alert_windows_notification_turn_off_action" msgid="7805857234839123780">"Matikan"</string>
     <string name="ext_media_checking_notification_title" msgid="8299199995416510094">"Menyemak <xliff:g id="NAME">%s</xliff:g>…"</string>
     <string name="ext_media_checking_notification_message" msgid="2231566971425375542">"Menyemak kandungan semasa"</string>
+    <string name="ext_media_checking_notification_message" product="tv" msgid="7986154434946021415">"Menganalisis storan media"</string>
     <string name="ext_media_new_notification_title" msgid="3517407571407687677">"<xliff:g id="NAME">%s</xliff:g> baharu"</string>
     <string name="ext_media_new_notification_title" product="automotive" msgid="9085349544984742727">"<xliff:g id="NAME">%s</xliff:g> tidak berfungsi"</string>
     <string name="ext_media_new_notification_message" msgid="6095403121990786986">"Ketik untuk menyediakan"</string>
+    <string name="ext_media_new_notification_message" product="tv" msgid="216863352100263668">"Pilih untuk penyediaan"</string>
     <string name="ext_media_new_notification_message" product="automotive" msgid="5140127881613227162">"Anda mungkin perlu memformatkan semula peranti. Ketik untuk mengeluarkan media."</string>
     <string name="ext_media_ready_notification_message" msgid="777258143284919261">"Untuk memindahkan foto dan media"</string>
+    <string name="ext_media_ready_notification_message" product="tv" msgid="8847134811163165935">"Semak imbas fail media"</string>
     <string name="ext_media_unmountable_notification_title" msgid="4895444667278979910">"Isu dengan <xliff:g id="NAME">%s</xliff:g>"</string>
     <string name="ext_media_unmountable_notification_title" product="automotive" msgid="3142723758949023280">"<xliff:g id="NAME">%s</xliff:g> tidak berfungsi"</string>
     <string name="ext_media_unmountable_notification_message" msgid="3256290114063126205">"Ketik untuk menyelesaikan masalah"</string>
@@ -1353,7 +1358,7 @@
     <string name="ext_media_unsupported_notification_title" msgid="4358280700537030333">"<xliff:g id="NAME">%s</xliff:g> tidak disokong"</string>
     <string name="ext_media_unsupported_notification_title" product="automotive" msgid="6004193172658722381">"<xliff:g id="NAME">%s</xliff:g> tidak berfungsi"</string>
     <string name="ext_media_unsupported_notification_message" msgid="917738524888367560">"Peranti ini tidak menyokong <xliff:g id="NAME">%s</xliff:g> ini. Ketik untuk menyediakannya dalam format yang disokong."</string>
-    <string name="ext_media_unsupported_notification_message" product="tv" msgid="7744945987775645685">"Peranti ini tidak menyokong <xliff:g id="NAME">%s</xliff:g> ini. Pilih untuk menyediakan media dalam format yang disokong."</string>
+    <string name="ext_media_unsupported_notification_message" product="tv" msgid="1595482802187036532">"Pilih untuk menyediakan <xliff:g id="NAME">%s</xliff:g> dalam format yang disokong."</string>
     <string name="ext_media_unsupported_notification_message" product="automotive" msgid="3412494732736336330">"Anda mungkin perlu memformatkan semula peranti"</string>
     <string name="ext_media_badremoval_notification_title" msgid="4114625551266196872">"<xliff:g id="NAME">%s</xliff:g> ditanggalkan tanpa dijangka"</string>
     <string name="ext_media_badremoval_notification_message" msgid="1986514704499809244">"Keluarkan media sebelum menanggalkan media itu untuk mengelakkan kehilangan kandungan"</string>
@@ -1470,7 +1475,7 @@
     <string name="sync_do_nothing" msgid="4528734662446469646">"Jangan lakukan apa-apa sekarang"</string>
     <string name="choose_account_label" msgid="5557833752759831548">"Pilih akaun"</string>
     <string name="add_account_label" msgid="4067610644298737417">"Tambah akaun"</string>
-    <string name="add_account_button_label" msgid="322390749416414097">"Tambah akaun"</string>
+    <string name="add_account_button_label" msgid="322390749416414097">"Tambahkan akaun"</string>
     <string name="number_picker_increment_button" msgid="7621013714795186298">"Tingkatkan"</string>
     <string name="number_picker_decrement_button" msgid="5116948444762708204">"Kurangkan"</string>
     <string name="number_picker_increment_scroll_mode" msgid="8403893549806805985">"<xliff:g id="VALUE">%s</xliff:g> ketik &amp; tahan."</string>
@@ -1713,6 +1718,17 @@
     <string name="mediasize_na_monarch" msgid="4396943937986136896">"Monarki"</string>
     <string name="mediasize_na_quarto" msgid="2119101847712239885">"Quarto"</string>
     <string name="mediasize_na_foolscap" msgid="5011612828564394648">"Kertas kajang"</string>
+    <string name="mediasize_na_ansi_c" msgid="3104916921818289618">"ANSI C"</string>
+    <string name="mediasize_na_ansi_d" msgid="254005964819282724">"ANSI D"</string>
+    <string name="mediasize_na_ansi_e" msgid="4424174989686785675">"ANSI E"</string>
+    <string name="mediasize_na_ansi_f" msgid="146980362213260987">"ANSI F"</string>
+    <string name="mediasize_na_arch_a" msgid="5280681822380032361">"Arch A"</string>
+    <string name="mediasize_na_arch_b" msgid="2113344093437297427">"Arch B"</string>
+    <string name="mediasize_na_arch_c" msgid="971002546186856623">"Arch C"</string>
+    <string name="mediasize_na_arch_d" msgid="6450996075335049806">"Arch D"</string>
+    <string name="mediasize_na_arch_e" msgid="6782708486949266519">"Arch E"</string>
+    <string name="mediasize_na_arch_e1" msgid="4707138568738504275">"Arch E1"</string>
+    <string name="mediasize_na_super_b" msgid="6964127155618393178">"Super B"</string>
     <string name="mediasize_chinese_roc_8k" msgid="411670106572707544">"ROC 8K"</string>
     <string name="mediasize_chinese_roc_16k" msgid="7496706798725321898">"ROC 16K"</string>
     <string name="mediasize_chinese_prc_1" msgid="946949835711037253">"PRC 1"</string>
@@ -1749,6 +1765,7 @@
     <string name="mediasize_japanese_kahu" msgid="7290232592648122042">"Kahu"</string>
     <string name="mediasize_japanese_kaku2" msgid="7477551750461028312">"Kaku2"</string>
     <string name="mediasize_japanese_you4" msgid="5552111912684384833">"You4"</string>
+    <string name="mediasize_japanese_l" msgid="1326765321473431817">"L"</string>
     <string name="mediasize_unknown_portrait" msgid="3817016220446495613">"Potret tidak diketahui"</string>
     <string name="mediasize_unknown_landscape" msgid="1584741567225095325">"Landskap tidak diketahui"</string>
     <string name="write_fail_reason_cancelled" msgid="2344081488493969190">"Dibatalkan"</string>
@@ -1794,7 +1811,7 @@
     <string name="confirm_battery_saver" msgid="5247976246208245754">"OK"</string>
     <string name="battery_saver_description_with_learn_more" msgid="4424488535318105801">"Untuk melanjutkan hayat bateri, Penjimat Bateri:\n\n• Menghidupkan Tema gelap\n• Mematikan atau mengehadkan aktiviti latar belakang, sesetengah kesan visual dan ciri lain seperti “Ok Google”\n\n"<annotation id="url">"Ketahui lebih lanjut"</annotation></string>
     <string name="battery_saver_description" msgid="6794188153647295212">"Untuk melanjutkan hayat bateri, Penjimat Bateri:\n\n•Menghidupkan Tema gelap\n• Mematikan atau mengehadkan aktiviti latar belakang, sesetengah kesan visual dan ciri-ciri lain seperti “Ok Google”"</string>
-    <string name="data_saver_description" msgid="4995164271550590517">"Untuk membantu mengurangkan penggunaan data, Penjimat Data menghalang sesetengah apl daripada menghantar atau menerima data di latar. Apl yang sedang digunakan boleh mengakses data tetapi mungkin tidak secara kerap. Perkara ini mungkin bermaksud bahawa imej tidak dipaparkan sehingga anda mengetik pada imej itu, contohnya."</string>
+    <string name="data_saver_description" msgid="4995164271550590517">"Untuk membantu penggunaan data dikurangkan, Penjimat Data menghalang sesetengah apl daripada menghantar atau menerima data di latar. Apl yang sedang digunakan boleh mengakses data tetapi mungkin tidak secara kerap. Perkara ini mungkin bermaksud bahawa imej tidak dipaparkan sehingga anda mengetik pada imej itu, contohnya."</string>
     <string name="data_saver_enable_title" msgid="7080620065745260137">"Hidupkan Penjimat Data?"</string>
     <string name="data_saver_enable_button" msgid="4399405762586419726">"Hidupkan"</string>
     <plurals name="zen_mode_duration_minutes_summary" formatted="false" msgid="2877101784123058273">
@@ -1892,7 +1909,7 @@
     <string name="app_blocked_title" msgid="7353262160455028160">"Apl tidak tersedia"</string>
     <string name="app_blocked_message" msgid="542972921087873023">"<xliff:g id="APP_NAME">%1$s</xliff:g> tidak tersedia sekarang."</string>
     <string name="deprecated_target_sdk_message" msgid="5203207875657579953">"Apl ini dibina untuk versi Android yang lebih lama dan mungkin tidak berfungsi dengan betul. Cuba semak kemas kini atau hubungi pembangun."</string>
-    <string name="deprecated_target_sdk_app_store" msgid="8456784048558808909">"Semak kemas kini"</string>
+    <string name="deprecated_target_sdk_app_store" msgid="8456784048558808909">"Semak kemaskinian"</string>
     <string name="new_sms_notification_title" msgid="6528758221319927107">"Anda mempunyai mesej baharu"</string>
     <string name="new_sms_notification_content" msgid="3197949934153460639">"Buka apl SMS untuk melihat"</string>
     <string name="profile_encrypted_title" msgid="9001208667521266472">"Sesetengah fungsi mungkin terhad"</string>

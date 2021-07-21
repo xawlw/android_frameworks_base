@@ -16,22 +16,14 @@
 
 package com.android.server;
 
-import android.bluetooth.BluetoothA2dp;
-import android.bluetooth.BluetoothAdapter;
-import android.bluetooth.BluetoothHearingAid;
-import android.bluetooth.BluetoothProfile;
-import android.bluetooth.BluetoothProfile.ServiceListener;
 import android.content.Context;
-import android.content.res.Resources;
 import android.database.ContentObserver;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
 import android.provider.Settings;
 import android.util.Log;
-import android.widget.Toast;
 
-import com.android.internal.R;
 import com.android.internal.annotations.VisibleForTesting;
 
 /**
@@ -53,7 +45,7 @@ class BluetoothAirplaneModeListener {
 
     private final BluetoothManagerService mBluetoothManager;
     private final BluetoothAirplaneModeHandler mHandler;
-    private AirplaneModeHelper mAirplaneHelper;
+    private BluetoothModeChangeHelper mAirplaneHelper;
 
     @VisibleForTesting int mToastCount = 0;
 
@@ -97,7 +89,7 @@ class BluetoothAirplaneModeListener {
      * Call after boot complete
      */
     @VisibleForTesting
-    void start(AirplaneModeHelper helper) {
+    void start(BluetoothModeChangeHelper helper) {
         Log.i(TAG, "start");
         mAirplaneHelper = helper;
         mToastCount = mAirplaneHelper.getSettingsInt(TOAST_COUNT);
@@ -143,6 +135,7 @@ class BluetoothAirplaneModeListener {
         }
         return true;
     }
+<<<<<<< HEAD
 
     /**
      * Helper class that handles callout and callback methods without
@@ -264,4 +257,6 @@ class BluetoothAirplaneModeListener {
            return ret;
         }
     };
+=======
+>>>>>>> 1a7b0835ced351de3f8f73b29a3b40996d335e65
 }

@@ -14,6 +14,23 @@
 // limitations under the License.
 //
 
+package {
+    default_applicable_licenses: ["frameworks_base_packages_SystemUI_license"],
+}
+
+// Added automatically by a large-scale-change
+// See: http://go/android-license-faq
+license {
+    name: "frameworks_base_packages_SystemUI_license",
+    visibility: [":__subpackages__"],
+    license_kinds: [
+        "SPDX-license-identifier-Apache-2.0",
+    ],
+    license_text: [
+        "NOTICE",
+    ],
+}
+
 java_library {
     name: "SystemUI-proto",
 
@@ -46,7 +63,7 @@ android_library {
         "WindowManager-Shell",
         "SystemUIPluginLib",
         "SystemUISharedLib",
-	"SystemUI-statsd",
+        "SystemUI-statsd",
         "SettingsLib",
         "androidx.viewpager2_viewpager2",
         "androidx.legacy_legacy-support-v4",
@@ -69,6 +86,7 @@ android_library {
         "iconloader_base",
         "SystemUI-tags",
         "SystemUI-proto",
+<<<<<<< HEAD
         "dagger2-2.19",
         "jsr330",
         "vendor.lineage.biometrics.fingerprint.inscreen-V1.0-java",
@@ -76,6 +94,10 @@ android_library {
         "vendor.lineage.powershare-V1.0-java",
         "faceunlock_framework",
         "VendorSupport-preference",
+=======
+        "dagger2",
+        "jsr330"
+>>>>>>> 1a7b0835ced351de3f8f73b29a3b40996d335e65
     ],
     manifest: "AndroidManifest.xml",
     additional_manifests: ["ShapeShiftManifest.xml"],
@@ -86,7 +108,7 @@ android_library {
 
     kotlincflags: ["-Xjvm-default=enable"],
 
-    plugins: ["dagger2-compiler-2.19"],
+    plugins: ["dagger2-compiler"],
 }
 
 filegroup {
@@ -150,9 +172,14 @@ android_library {
         "mockito-target-extended-minus-junit4",
         "testables",
         "truth-prebuilt",
+<<<<<<< HEAD
         "dagger2-2.19",
         "jsr330",
         "airbnb-lottie",
+=======
+        "dagger2",
+        "jsr330"
+>>>>>>> 1a7b0835ced351de3f8f73b29a3b40996d335e65
     ],
     libs: [
         "android.test.runner",
@@ -164,7 +191,7 @@ android_library {
         "--extra-packages",
         "com.android.systemui",
     ],
-    plugins: ["dagger2-compiler-2.19"],
+    plugins: ["dagger2-compiler"],
 }
 
 android_app {

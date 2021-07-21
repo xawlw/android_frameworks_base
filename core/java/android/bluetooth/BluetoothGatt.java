@@ -58,9 +58,9 @@ public final class BluetoothGatt implements BluetoothProfile {
     private int mConnState;
     private final Object mStateLock = new Object();
     private final Object mDeviceBusyLock = new Object();
-    @UnsupportedAppUsage
+    @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
     private Boolean mDeviceBusy = false;
-    @UnsupportedAppUsage
+    @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
     private int mTransport;
     private int mPhy;
     private boolean mOpportunistic;
@@ -74,6 +74,9 @@ public final class BluetoothGatt implements BluetoothProfile {
     private static final int CONN_STATE_CONNECTED = 2;
     private static final int CONN_STATE_DISCONNECTING = 3;
     private static final int CONN_STATE_CLOSED = 4;
+
+    private static final int WRITE_CHARACTERISTIC_MAX_RETRIES = 5;
+    private static final int WRITE_CHARACTERISTIC_TIME_TO_WAIT = 1000; // milliseconds
 
     private List<BluetoothGattService> mServices;
 
@@ -127,6 +130,27 @@ public final class BluetoothGatt implements BluetoothProfile {
     public static final int CONNECTION_PRIORITY_LOW_POWER = 2;
 
     /**
+     * A GATT writeCharacteristic request is started successfully.
+     *
+     * @hide
+     */
+    public static final int GATT_WRITE_REQUEST_SUCCESS = 0;
+
+    /**
+     * A GATT writeCharacteristic request failed to start.
+     *
+     * @hide
+     */
+    public static final int GATT_WRITE_REQUEST_FAIL = 1;
+
+    /**
+     * A GATT writeCharacteristic request is issued to a busy remote device.
+     *
+     * @hide
+     */
+    public static final int GATT_WRITE_REQUEST_BUSY = 2;
+
+    /**
      * No authentication required.
      *
      * @hide
@@ -134,14 +158,14 @@ public final class BluetoothGatt implements BluetoothProfile {
     /*package*/ static final int AUTHENTICATION_NONE = 0;
 
     /**
-     * Authentication requested; no man-in-the-middle protection required.
+     * Authentication requested; no person-in-the-middle protection required.
      *
      * @hide
      */
     /*package*/ static final int AUTHENTICATION_NO_MITM = 1;
 
     /**
-     * Authentication with man-in-the-middle protection requested.
+     * Authentication with person-in-the-middle protection requested.
      *
      * @hide
      */
@@ -428,9 +452,19 @@ public final class BluetoothGatt implements BluetoothProfile {
                         try {
                             final int authReq = (mAuthRetryState == AUTH_RETRY_STATE_IDLE)
                                     ? AUTHENTICATION_NO_MITM : AUTHENTICATION_MITM;
-                            mService.writeCharacteristic(mClientIf, address, handle,
-                                    characteristic.getWriteType(), authReq,
-                                    characteristic.getValue());
+                            int requestStatus = GATT_WRITE_REQUEST_FAIL;
+                            for (int i = 0; i < WRITE_CHARACTERISTIC_MAX_RETRIES; i++) {
+                                requestStatus =  mService.writeCharacteristic(mClientIf, address,
+                                                  handle, characteristic.getWriteType(), authReq,
+                                                  characteristic.getValue());
+                                if (requestStatus != GATT_WRITE_REQUEST_BUSY) {
+                                    break;
+                                }
+                                try {
+                                    Thread.sleep(WRITE_CHARACTERISTIC_TIME_TO_WAIT);
+                                } catch (InterruptedException e) {
+                                }
+                            }
                             mAuthRetryState++;
                             return;
                         } catch (RemoteException e) {
@@ -688,6 +722,31 @@ public final class BluetoothGatt implements BluetoothProfile {
                         }
                     });
                 }
+
+                /**
+                 * Callback invoked when service changed event is received
+                 * @hide
+                 */
+                @Override
+                public void onServiceChanged(String address) {
+                    if (DBG) {
+                        Log.d(TAG, "onServiceChanged() - Device=" + address);
+                    }
+
+                    if (!address.equals(mDevice.getAddress())) {
+                        return;
+                    }
+
+                    runOrQueueCallback(new Runnable() {
+                        @Override
+                        public void run() {
+                            final BluetoothGattCallback callback = mCallback;
+                            if (callback != null) {
+                                callback.onServiceChanged(BluetoothGatt.this);
+                            }
+                        }
+                    });
+                }
             };
 
     /*package*/ BluetoothGatt(IBluetoothGatt iGatt, BluetoothDevice device,
@@ -811,16 +870,25 @@ public final class BluetoothGatt implements BluetoothProfile {
      * <p>Requires {@link android.Manifest.permission#BLUETOOTH} permission.
      *
      * @param callback GATT callback handler that will receive asynchronous callbacks.
+<<<<<<< HEAD
      * @param eattSupport specifies whether client app needs EATT channel for client operations.
      * If both local and remote devices support EATT and local app asks for EATT, GATT client
      * operations will be performed using EATT channel.
      * If either local or remote device doesn't support EATT but local App asks for EATT, GATT
      * client operations will be performed using unenhanced ATT channel.
+=======
+     * @param eatt_support indicate to allow for eatt support
+>>>>>>> 1a7b0835ced351de3f8f73b29a3b40996d335e65
      * @return If true, the callback will be called to notify success or failure, false on immediate
      * error
      * @hide
      */
+<<<<<<< HEAD
     private boolean registerApp(BluetoothGattCallback callback, Handler handler, boolean eattSupport) {
+=======
+    private boolean registerApp(BluetoothGattCallback callback, Handler handler,
+                                boolean eatt_support) {
+>>>>>>> 1a7b0835ced351de3f8f73b29a3b40996d335e65
         if (DBG) Log.d(TAG, "registerApp()");
         if (mService == null) return false;
 
@@ -830,7 +898,11 @@ public final class BluetoothGatt implements BluetoothProfile {
         if (DBG) Log.d(TAG, "registerApp() - UUID=" + uuid);
 
         try {
+<<<<<<< HEAD
             mService.registerClient(new ParcelUuid(uuid), mBluetoothGattCallback, eattSupport);
+=======
+            mService.registerClient(new ParcelUuid(uuid), mBluetoothGattCallback, eatt_support);
+>>>>>>> 1a7b0835ced351de3f8f73b29a3b40996d335e65
         } catch (RemoteException e) {
             Log.e(TAG, "", e);
             return false;
@@ -878,7 +950,7 @@ public final class BluetoothGatt implements BluetoothProfile {
      * automatically connect as soon as the remote device becomes available (true).
      * @return true, if the connection attempt was initiated successfully
      */
-    @UnsupportedAppUsage
+    @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
     /*package*/ boolean connect(Boolean autoConnect, BluetoothGattCallback callback,
             Handler handler) {
         return connect(autoConnect, callback, handler, false);
@@ -1167,7 +1239,9 @@ public final class BluetoothGatt implements BluetoothProfile {
                     characteristic.getInstanceId(), AUTHENTICATION_NONE);
         } catch (RemoteException e) {
             Log.e(TAG, "", e);
-            mDeviceBusy = false;
+            synchronized (mDeviceBusyLock) {
+                mDeviceBusy = false;
+            }
             return false;
         }
 
@@ -1201,7 +1275,9 @@ public final class BluetoothGatt implements BluetoothProfile {
                     new ParcelUuid(uuid), startHandle, endHandle, AUTHENTICATION_NONE);
         } catch (RemoteException e) {
             Log.e(TAG, "", e);
-            mDeviceBusy = false;
+            synchronized (mDeviceBusyLock) {
+                mDeviceBusy = false;
+            }
             return false;
         }
 
@@ -1238,21 +1314,35 @@ public final class BluetoothGatt implements BluetoothProfile {
         if (device == null) return false;
 
         synchronized (mDeviceBusyLock) {
-            if (mDeviceBusy) return false;
+            if (mDeviceBusy) {
+              return false;
+            }
             mDeviceBusy = true;
         }
 
+        int requestStatus = GATT_WRITE_REQUEST_FAIL;
         try {
-            mService.writeCharacteristic(mClientIf, device.getAddress(),
+            for (int i = 0; i < WRITE_CHARACTERISTIC_MAX_RETRIES; i++) {
+                requestStatus = mService.writeCharacteristic(mClientIf, device.getAddress(),
                     characteristic.getInstanceId(), characteristic.getWriteType(),
                     AUTHENTICATION_NONE, characteristic.getValue());
+                if (requestStatus != GATT_WRITE_REQUEST_BUSY) {
+                    break;
+                }
+                try {
+                    Thread.sleep(WRITE_CHARACTERISTIC_TIME_TO_WAIT);
+                } catch (InterruptedException e) {
+                }
+            }
         } catch (RemoteException e) {
             Log.e(TAG, "", e);
-            mDeviceBusy = false;
+            synchronized (mDeviceBusyLock) {
+                mDeviceBusy = false;
+            }
             return false;
         }
 
-        return true;
+        return requestStatus == GATT_WRITE_REQUEST_SUCCESS;
     }
 
     /**
@@ -1290,7 +1380,9 @@ public final class BluetoothGatt implements BluetoothProfile {
                     descriptor.getInstanceId(), AUTHENTICATION_NONE);
         } catch (RemoteException e) {
             Log.e(TAG, "", e);
-            mDeviceBusy = false;
+            synchronized (mDeviceBusyLock) {
+                mDeviceBusy = false;
+            }
             return false;
         }
 
@@ -1331,7 +1423,9 @@ public final class BluetoothGatt implements BluetoothProfile {
                     AUTHENTICATION_NONE, descriptor.getValue());
         } catch (RemoteException e) {
             Log.e(TAG, "", e);
-            mDeviceBusy = false;
+            synchronized (mDeviceBusyLock) {
+                mDeviceBusy = false;
+            }
             return false;
         }
 
@@ -1398,7 +1492,9 @@ public final class BluetoothGatt implements BluetoothProfile {
             mService.endReliableWrite(mClientIf, mDevice.getAddress(), true);
         } catch (RemoteException e) {
             Log.e(TAG, "", e);
-            mDeviceBusy = false;
+            synchronized (mDeviceBusyLock) {
+                mDeviceBusy = false;
+            }
             return false;
         }
 

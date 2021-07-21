@@ -18,9 +18,7 @@ package com.android.server;
 
 import static android.Manifest.permission.ACCESS_MTP;
 import static android.Manifest.permission.INSTALL_PACKAGES;
-import static android.Manifest.permission.READ_EXTERNAL_STORAGE;
 import static android.Manifest.permission.WRITE_EXTERNAL_STORAGE;
-import static android.Manifest.permission.WRITE_MEDIA_STORAGE;
 import static android.app.ActivityManager.PROCESS_STATE_NONEXISTENT;
 import static android.app.AppOpsManager.MODE_ALLOWED;
 import static android.app.AppOpsManager.OP_LEGACY_STORAGE;
@@ -1121,7 +1119,7 @@ class StorageManagerService extends IStorageManager.Stub
             }
 
             try {
-                // TODO(b/135341433): Remove paranoid logging when FUSE is stable
+                // TODO(b/135341433): Remove cautious logging when FUSE is stable
                 Slog.i(TAG, "Resetting vold...");
                 mVold.reset();
                 Slog.i(TAG, "Reset vold");
@@ -1400,7 +1398,11 @@ class StorageManagerService extends IStorageManager.Stub
                     final int oldState = vol.state;
                     final int newState = state;
                     vol.state = newState;
+<<<<<<< HEAD
                     final VolumeInfo vInfo = vol.clone();
+=======
+                    final VolumeInfo vInfo = new VolumeInfo(vol);
+>>>>>>> 1a7b0835ced351de3f8f73b29a3b40996d335e65
                     final SomeArgs args = SomeArgs.obtain();
                     args.arg1 = vInfo;
                     args.arg2 = oldState;
@@ -1552,6 +1554,9 @@ class StorageManagerService extends IStorageManager.Stub
             mHandler.obtainMessage(H_VOLUME_MOUNT, vol).sendToTarget();
 
         } else if (vol.type == VolumeInfo.TYPE_STUB) {
+            if (vol.disk.isStubVisible()) {
+                vol.mountFlags |= VolumeInfo.MOUNT_FLAG_VISIBLE;
+            }
             vol.mountUserId = mCurrentUserId;
             mHandler.obtainMessage(H_VOLUME_MOUNT, vol).sendToTarget();
         } else {
@@ -1620,7 +1625,6 @@ class StorageManagerService extends IStorageManager.Stub
             }
         }
     }
-
 
     private void onVolumeStateChangedAsync(VolumeInfo vol, int oldState, int newState) {
         synchronized (mLock) {
@@ -2254,7 +2258,7 @@ class StorageManagerService extends IStorageManager.Stub
 
     private void mount(VolumeInfo vol) {
         try {
-            // TODO(b/135341433): Remove paranoid logging when FUSE is stable
+            // TODO(b/135341433): Remove cautious logging when FUSE is stable
             Slog.i(TAG, "Mounting volume " + vol);
             mVold.mount(vol.id, vol.mountFlags, vol.mountUserId, new IVoldMountCallback.Stub() {
                 @Override
@@ -2990,7 +2994,7 @@ class StorageManagerService extends IStorageManager.Stub
         return 0;
     }
 
-    /** Set the password for encrypting the master key.
+    /** Set the password for encrypting the main key.
      *  @param type One of the CRYPTO_TYPE_XXX consts defined in StorageManager.
      *  @param password The password to set.
      */
@@ -3068,7 +3072,7 @@ class StorageManagerService extends IStorageManager.Stub
     }
 
     /**
-     * Get the type of encryption used to encrypt the master key.
+     * Get the type of encryption used to encrypt the main key.
      * @return The type, one of the CRYPT_TYPE_XXX consts from StorageManager.
      */
     @Override
@@ -3329,9 +3333,18 @@ class StorageManagerService extends IStorageManager.Stub
         enforcePermission(android.Manifest.permission.STORAGE_INTERNAL);
 
         if (isFsEncrypted) {
+            // When a user has secure lock screen, require secret to actually unlock.
+            // This check is mostly in place for emulation mode.
+            if (StorageManager.isFileEncryptedEmulatedOnly() &&
+                mLockPatternUtils.isSecure(userId) && ArrayUtils.isEmpty(secret)) {
+                throw new IllegalStateException("Secret required to unlock secure user " + userId);
+            }
             try {
                 mVold.unlockUserKey(userId, serialNumber, encodeBytes(token),
                         encodeBytes(secret));
+            } catch (ServiceSpecificException sse) {
+                Slog.d(TAG, "Expected if the user has not unlocked the device.", sse);
+                return;
             } catch (Exception e) {
                 Slog.wtf(TAG, e);
                 return;
@@ -3455,6 +3468,27 @@ class StorageManagerService extends IStorageManager.Stub
             }
         } else {
             Log.e(TAG, "Path " + path + " is not a valid application-specific directory");
+        }
+    }
+
+    /*
+     * Disable storage's app data isolation for testing.
+     */
+    @Override
+    public void disableAppDataIsolation(String pkgName, int pid, int userId) {
+        final int callingUid = Binder.getCallingUid();
+        if (callingUid != Process.ROOT_UID && callingUid != Process.SHELL_UID) {
+            throw new SecurityException("no permission to enable app visibility");
+        }
+        final String[] sharedPackages =
+                mPmInternal.getSharedUserPackagesForPackage(pkgName, userId);
+        final int uid = mPmInternal.getPackageUid(pkgName, 0, userId);
+        final String[] packages =
+                sharedPackages.length != 0 ? sharedPackages : new String[]{pkgName};
+        try {
+            mVold.unmountAppStorageDirs(uid, pid, packages);
+        } catch (RemoteException e) {
+            throw e.rethrowAsRuntimeException();
         }
     }
 
@@ -4330,18 +4364,8 @@ class StorageManagerService extends IStorageManager.Stub
             }
 
             // Determine if caller is holding runtime permission
-            final boolean hasRead = StorageManager.checkPermissionAndCheckOp(mContext, false, 0,
-                    uid, packageName, READ_EXTERNAL_STORAGE, OP_READ_EXTERNAL_STORAGE);
             final boolean hasWrite = StorageManager.checkPermissionAndCheckOp(mContext, false, 0,
                     uid, packageName, WRITE_EXTERNAL_STORAGE, OP_WRITE_EXTERNAL_STORAGE);
-
-            // We're only willing to give out broad access if they also hold
-            // runtime permission; this is a firm CDD requirement
-            final boolean hasFull = mIPackageManager.checkUidPermission(WRITE_MEDIA_STORAGE,
-                    uid) == PERMISSION_GRANTED;
-            if (hasFull && hasWrite) {
-                return Zygote.MOUNT_EXTERNAL_FULL;
-            }
 
             // We're only willing to give out installer access if they also hold
             // runtime permission; this is a firm CDD requirement
@@ -4362,19 +4386,7 @@ class StorageManagerService extends IStorageManager.Stub
             if ((hasInstall || hasInstallOp) && hasWrite) {
                 return Zygote.MOUNT_EXTERNAL_INSTALLER;
             }
-
-            // Otherwise we're willing to give out sandboxed or non-sandboxed if
-            // they hold the runtime permission
-            boolean hasLegacy = mIAppOpsService.checkOperation(OP_LEGACY_STORAGE,
-                    uid, packageName) == MODE_ALLOWED;
-
-            if (hasLegacy && hasWrite) {
-                return Zygote.MOUNT_EXTERNAL_WRITE;
-            } else if (hasLegacy && hasRead) {
-                return Zygote.MOUNT_EXTERNAL_READ;
-            } else {
-                return Zygote.MOUNT_EXTERNAL_DEFAULT;
-            }
+            return Zygote.MOUNT_EXTERNAL_DEFAULT;
         } catch (RemoteException e) {
             // Should not happen
         }
@@ -4646,14 +4658,7 @@ class StorageManagerService extends IStorageManager.Stub
 
                     // Create package obb and data dir if it doesn't exist.
                     int appUid = UserHandle.getUid(userId, mPmInternal.getPackage(pkg).getUid());
-                    File file = new File(packageObbDir);
-                    if (!file.exists()) {
-                        vold.setupAppDir(packageObbDir, appUid);
-                    }
-                    file = new File(packageDataDir);
-                    if (!file.exists()) {
-                        vold.setupAppDir(packageDataDir, appUid);
-                    }
+                    vold.ensureAppDirsCreated(new String[] {packageObbDir, packageDataDir}, appUid);
                 }
             } catch (ServiceManager.ServiceNotFoundException | RemoteException e) {
                 Slog.e(TAG, "Unable to create obb and data directories for " + processName,e);

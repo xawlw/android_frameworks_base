@@ -284,6 +284,8 @@ public class Binder implements IBinder {
      * system services to determine its identity and check permissions.
      * If the current thread is not currently executing an incoming transaction,
      * then its own pid is returned.
+     *
+     * Warning: oneway transactions do not receive PID.
      */
     @CriticalNative
     public static final native int getCallingPid();
@@ -527,16 +529,28 @@ public class Binder implements IBinder {
 
     /**
      * Mark as being built with VINTF-level stability promise. This API should
-     * only ever be invoked by the build system. It means that the interface
-     * represented by this binder is guaranteed to be kept stable for several
-     * years, and the build system also keeps snapshots of these APIs and
-     * invokes the AIDL compiler to make sure that these snapshots are
-     * backwards compatible. Instead of using this API, use an @VintfStability
-     * interface.
+     * only ever be invoked by generated code from the aidl compiler. It means
+     * that the interface represented by this binder is guaranteed to be kept
+     * stable for several years, according to the VINTF compatibility lifecycle,
+     * and the build system also keeps snapshots of these APIs and invokes the
+     * AIDL compiler to make sure that these snapshots are backwards compatible.
+     * Instead of using this API, use the @VintfStability annotation on your
+     * AIDL interface.
      *
      * @hide
      */
+    @SystemApi(client = SystemApi.Client.MODULE_LIBRARIES)
     public final native void markVintfStability();
+
+    /**
+     * Use a VINTF-stability binder w/o VINTF requirements. Should be called
+     * on a binder before it is sent out of process.
+     *
+     * This must be called before the object is sent to another process.
+     *
+     * @hide
+     */
+    public final native void forceDowngradeToSystemStability();
 
     /**
      * Flush any Binder commands pending in the current thread to the kernel
@@ -1084,7 +1098,6 @@ public class Binder implements IBinder {
     }
 
     private static native long getNativeBBinderHolder();
-    private static native long getFinalizer();
 
     /**
      * By default, we use the calling uid since we can always trust it.

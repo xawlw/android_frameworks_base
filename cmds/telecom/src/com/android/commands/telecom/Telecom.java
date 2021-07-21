@@ -66,9 +66,11 @@ public final class Telecom extends BaseCommand {
     private static final String COMMAND_SET_PHONE_ACCOUNT_SUGGESTION_COMPONENT =
             "set-phone-acct-suggestion-component";
     private static final String COMMAND_UNREGISTER_PHONE_ACCOUNT = "unregister-phone-account";
+    private static final String COMMAND_SET_CALL_DIAGNOSTIC_SERVICE = "set-call-diagnostic-service";
     private static final String COMMAND_SET_DEFAULT_DIALER = "set-default-dialer";
     private static final String COMMAND_GET_DEFAULT_DIALER = "get-default-dialer";
     private static final String COMMAND_STOP_BLOCK_SUPPRESSION = "stop-block-suppression";
+    private static final String COMMAND_CLEANUP_STUCK_CALLS = "cleanup-stuck-calls";
 
     /**
      * Change the system dialer package name if a package name was specified,
@@ -110,6 +112,7 @@ public final class Telecom extends BaseCommand {
                 + "usage: telecom register-sim-phone-account <COMPONENT> <ID> <USER_SN>"
                 + " <LABEL> <ADDRESS>\n"
                 + "usage: telecom unregister-phone-account <COMPONENT> <ID> <USER_SN>\n"
+                + "usage: telecom set-call-diagnostic-service <PACKAGE>\n"
                 + "usage: telecom set-default-dialer <PACKAGE>\n"
                 + "usage: telecom get-default-dialer\n"
                 + "usage: telecom get-system-dialer\n"
@@ -119,6 +122,8 @@ public final class Telecom extends BaseCommand {
                 + "usage: telecom get-max-phones\n"
                 + "usage: telecom stop-block-suppression: Stop suppressing the blocked number"
                         + " provider after a call to emergency services.\n"
+                + "usage: telecom cleanup-stuck-calls: Clear any disconnected calls that have"
+                + " gotten wedged in Telecom.\n"
                 + "usage: telecom set-emer-phone-account-filter <PACKAGE>\n"
                 + "\n"
                 + "telecom set-phone-account-enabled: Enables the given phone account, if it has"
@@ -127,6 +132,7 @@ public final class Telecom extends BaseCommand {
                 + "telecom set-phone-account-disabled: Disables the given phone account, if it"
                         + " has already been registered with telecom.\n"
                 + "\n"
+                + "telecom set-call-diagnostic-service: overrides call diagnostic service.\n"
                 + "telecom set-default-dialer: Sets the override default dialer to the given"
                         + " component; this will override whatever the dialer role is set to.\n"
                 + "\n"
@@ -202,6 +208,9 @@ public final class Telecom extends BaseCommand {
             case COMMAND_SET_PHONE_ACCOUNT_SUGGESTION_COMPONENT:
                 runSetTestPhoneAcctSuggestionComponent();
                 break;
+            case COMMAND_SET_CALL_DIAGNOSTIC_SERVICE:
+                runSetCallDiagnosticService();
+                break;
             case COMMAND_REGISTER_SIM_PHONE_ACCOUNT:
                 runRegisterSimPhoneAccount();
                 break;
@@ -213,6 +222,9 @@ public final class Telecom extends BaseCommand {
                 break;
             case COMMAND_STOP_BLOCK_SUPPRESSION:
                 runStopBlockSuppression();
+                break;
+            case COMMAND_CLEANUP_STUCK_CALLS:
+                runCleanupStuckCalls();
                 break;
             case COMMAND_SET_DEFAULT_DIALER:
                 runSetDefaultDialer();
@@ -313,6 +325,13 @@ public final class Telecom extends BaseCommand {
         mTelecomService.addOrRemoveTestCallCompanionApp(packageName, isAddedBool);
     }
 
+    private void runSetCallDiagnosticService() throws RemoteException {
+        String packageName = nextArg();
+        if ("default".equals(packageName)) packageName = null;
+        mTelecomService.setTestCallDiagnosticService(packageName);
+        System.out.println("Success - " + packageName + " set as call diagnostic service.");
+    }
+
     private void runSetTestPhoneAcctSuggestionComponent() throws RemoteException {
         final String componentName = nextArg();
         mTelecomService.setTestPhoneAcctSuggestionComponent(componentName);
@@ -333,6 +352,10 @@ public final class Telecom extends BaseCommand {
 
     private void runStopBlockSuppression() throws RemoteException {
         mTelecomService.stopBlockSuppression();
+    }
+
+    private void runCleanupStuckCalls() throws RemoteException {
+        mTelecomService.cleanupStuckCalls();
     }
 
     private void runSetDefaultDialer() throws RemoteException {

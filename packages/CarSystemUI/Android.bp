@@ -13,6 +13,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+package {
+    // See: http://go/android-license-faq
+    // A large-scale-change added 'default_applicable_licenses' to import
+    // all of the 'license_kinds' from "frameworks_base_license"
+    // to get the below license kinds:
+    //   SPDX-license-identifier-Apache-2.0
+    default_applicable_licenses: ["frameworks_base_license"],
+}
+
 android_library {
     name: "CarSystemUI-core",
 
@@ -49,7 +58,7 @@ android_library {
         "androidx.lifecycle_lifecycle-extensions",
         "SystemUI-tags",
         "SystemUI-proto",
-        "dagger2-2.19",
+        "dagger2",
         "//external/kotlinc:kotlin-annotations",
     ],
 
@@ -59,7 +68,7 @@ android_library {
 
     manifest: "AndroidManifest.xml",
 
-    plugins: ["dagger2-compiler-2.19"],
+    plugins: ["dagger2-compiler"],
 
 }
 
@@ -104,7 +113,7 @@ android_library {
         "mockito-target-inline-minus-junit4",
         "testables",
         "truth-prebuilt",
-        "dagger2-2.19",
+        "dagger2",
         "//external/kotlinc:kotlin-annotations",
     ],
     libs: [
@@ -118,7 +127,7 @@ android_library {
         "com.android.systemui",
     ],
 
-    plugins: ["dagger2-compiler-2.19"],
+    plugins: ["dagger2-compiler"],
 }
 
 android_app {
@@ -157,7 +166,7 @@ android_app {
 
     kotlincflags: ["-Xjvm-default=enable"],
 
-    plugins: ["dagger2-compiler-2.19"],
+    plugins: ["dagger2-compiler"],
 
     required: ["privapp_whitelist_com.android.systemui"],
 }

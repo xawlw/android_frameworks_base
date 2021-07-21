@@ -23,10 +23,14 @@
 #include <jni.h>
 #include <nativehelper/JNIHelp.h>
 
+#include <android/binder_manager.h>
+#include <android/binder_stability.h>
+#include <android/hidl/manager/1.2/IServiceManager.h>
 #include <binder/IServiceManager.h>
 #include <hidl/HidlTransportSupport.h>
 #include <incremental_service.h>
 
+#include <memtrackproxy/MemtrackProxy.h>
 #include <schedulerservice/SchedulingPolicyService.h>
 #include <sensorservice/SensorService.h>
 #include <sensorservicehidl/SensorManager.h>
@@ -56,6 +60,21 @@ static void android_server_SystemServer_startSensorService(JNIEnv* /* env */, jo
 
 }
 
+static void android_server_SystemServer_startMemtrackProxyService(JNIEnv* env,
+                                                                  jobject /* clazz */) {
+    using aidl::android::hardware::memtrack::MemtrackProxy;
+
+    const char* memtrackProxyService = "memtrack.proxy";
+
+    std::shared_ptr<MemtrackProxy> memtrack_proxy = ndk::SharedRefBase::make<MemtrackProxy>();
+    auto binder = memtrack_proxy->asBinder();
+
+    AIBinder_forceDowngradeToLocalStability(binder.get());
+
+    const binder_exception_t err = AServiceManager_addService(binder.get(), memtrackProxyService);
+    LOG_ALWAYS_FATAL_IF(err != EX_NONE, "Cannot register %s: %d", memtrackProxyService, err);
+}
+
 static void android_server_SystemServer_startHidlServices(JNIEnv* env, jobject /* clazz */) {
     using ::android::frameworks::schedulerservice::V1_0::ISchedulingPolicyService;
     using ::android::frameworks::schedulerservice::V1_0::implementation::SchedulingPolicyService;
@@ -64,6 +83,7 @@ static void android_server_SystemServer_startHidlServices(JNIEnv* env, jobject /
     using ::android::frameworks::stats::V1_0::IStats;
     using ::android::frameworks::stats::V1_0::implementation::StatsHal;
     using ::android::hardware::configureRpcThreadpool;
+    using ::android::hidl::manager::V1_0::IServiceManager;
 
     status_t err;
 
@@ -74,15 +94,22 @@ static void android_server_SystemServer_startHidlServices(JNIEnv* env, jobject /
 
     sp<ISensorManager> sensorService = new SensorManager(vm);
     err = sensorService->registerAsService();
-    ALOGE_IF(err != OK, "Cannot register %s: %d", ISensorManager::descriptor, err);
+    LOG_ALWAYS_FATAL_IF(err != OK, "Cannot register %s: %d", ISensorManager::descriptor, err);
 
     sp<ISchedulingPolicyService> schedulingService = new SchedulingPolicyService();
-    err = schedulingService->registerAsService();
-    ALOGE_IF(err != OK, "Cannot register %s: %d", ISchedulingPolicyService::descriptor, err);
+    if (IServiceManager::Transport::HWBINDER ==
+        hardware::defaultServiceManager1_2()->getTransport(ISchedulingPolicyService::descriptor,
+                                                           "default")) {
+        err = schedulingService->registerAsService("default");
+        LOG_ALWAYS_FATAL_IF(err != OK, "Cannot register %s: %d",
+                            ISchedulingPolicyService::descriptor, err);
+    } else {
+        ALOGW("%s is deprecated. Skipping registration.", ISchedulingPolicyService::descriptor);
+    }
 
     sp<IStats> statsHal = new StatsHal();
     err = statsHal->registerAsService();
-    ALOGE_IF(err != OK, "Cannot register %s: %d", IStats::descriptor, err);
+    LOG_ALWAYS_FATAL_IF(err != OK, "Cannot register %s: %d", IStats::descriptor, err);
 }
 
 static void android_server_SystemServer_initZygoteChildHeapProfiling(JNIEnv* /* env */,
@@ -91,6 +118,7 @@ static void android_server_SystemServer_initZygoteChildHeapProfiling(JNIEnv* /* 
 }
 
 static void android_server_SystemServer_fdtrackAbort(JNIEnv*, jobject) {
+<<<<<<< HEAD
     raise(BIONIC_SIGNAL_FDTRACK);
 
     // Wait for a bit to allow fdtrack to dump backtraces to logcat.
@@ -101,6 +129,11 @@ static void android_server_SystemServer_fdtrackAbort(JNIEnv*, jobject) {
         LOG_ALWAYS_FATAL("b/140703823: aborting due to fd leak: check logs for fd "
                          "backtraces");
     }).join();
+=======
+    sigval val;
+    val.sival_int = 1;
+    sigqueue(getpid(), BIONIC_SIGNAL_FDTRACK, val);
+>>>>>>> 1a7b0835ced351de3f8f73b29a3b40996d335e65
 }
 
 static jlong android_server_SystemServer_startIncrementalService(JNIEnv* env, jclass klass,
@@ -119,6 +152,8 @@ static void android_server_SystemServer_setIncrementalServiceSystemReady(JNIEnv*
 static const JNINativeMethod gMethods[] = {
         /* name, signature, funcPtr */
         {"startSensorService", "()V", (void*)android_server_SystemServer_startSensorService},
+        {"startMemtrackProxyService", "()V",
+         (void*)android_server_SystemServer_startMemtrackProxyService},
         {"startHidlServices", "()V", (void*)android_server_SystemServer_startHidlServices},
         {"initZygoteChildHeapProfiling", "()V",
          (void*)android_server_SystemServer_initZygoteChildHeapProfiling},

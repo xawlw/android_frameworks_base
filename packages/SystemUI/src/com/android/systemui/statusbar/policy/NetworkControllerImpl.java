@@ -24,6 +24,7 @@ import static android.net.wifi.WifiManager.TrafficStateCallback.DATA_ACTIVITY_NO
 import static android.net.wifi.WifiManager.TrafficStateCallback.DATA_ACTIVITY_OUT;
 import static android.telephony.PhoneStateListener.LISTEN_ACTIVE_DATA_SUBSCRIPTION_ID_CHANGE;
 
+import android.annotation.Nullable;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -183,7 +184,7 @@ public class NetworkControllerImpl extends BroadcastReceiver
     public NetworkControllerImpl(Context context, @Background Looper bgLooper,
             DeviceProvisionedController deviceProvisionedController,
             BroadcastDispatcher broadcastDispatcher, ConnectivityManager connectivityManager,
-            TelephonyManager telephonyManager, WifiManager wifiManager,
+            TelephonyManager telephonyManager, @Nullable WifiManager wifiManager,
             NetworkScoreManager networkScoreManager) {
         this(context, connectivityManager,
                 telephonyManager,
@@ -354,8 +355,6 @@ public class NetworkControllerImpl extends BroadcastReceiver
 
         // broadcasts
         IntentFilter filter = new IntentFilter();
-        filter.addAction(WifiManager.RSSI_CHANGED_ACTION);
-        filter.addAction(WifiManager.WIFI_STATE_CHANGED_ACTION);
         filter.addAction(WifiManager.NETWORK_STATE_CHANGED_ACTION);
         filter.addAction(Intent.ACTION_SIM_STATE_CHANGED);
         filter.addAction(TelephonyManager.ACTION_DEFAULT_DATA_SUBSCRIPTION_CHANGED);
@@ -1309,7 +1308,6 @@ public class NetworkControllerImpl extends BroadcastReceiver
         boolean show4gForLte = false;
         boolean hideLtePlus = false;
         boolean hspaDataDistinguishable;
-        boolean inflateSignalStrengths = false;
         boolean alwaysShowDataRatIcon = false;
         boolean showVolteIcon;
         boolean showVowifiIcon = false;
@@ -1323,8 +1321,6 @@ public class NetworkControllerImpl extends BroadcastReceiver
                     res.getBoolean(com.android.internal.R.bool.config_alwaysUseCdmaRssi);
             config.hspaDataDistinguishable =
                     res.getBoolean(R.bool.config_hspa_data_distinguishable);
-            config.inflateSignalStrengths = res.getBoolean(
-                    com.android.internal.R.bool.config_inflateSignalStrength);
 
             CarrierConfigManager configMgr = (CarrierConfigManager)
                     context.getSystemService(Context.CARRIER_CONFIG_SERVICE);

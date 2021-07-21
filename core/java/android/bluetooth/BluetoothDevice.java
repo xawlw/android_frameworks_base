@@ -63,6 +63,7 @@ import android.annotation.SystemApi;
 import android.app.PropertyInvalidatedCache;
 import android.compat.annotation.UnsupportedAppUsage;
 import android.content.Context;
+import android.os.Build;
 import android.os.Handler;
 import android.os.Parcel;
 import android.os.ParcelUuid;
@@ -494,9 +495,38 @@ public final class BluetoothDevice implements Parcelable {
 
     /** @hide */
     @SdkConstant(SdkConstantType.BROADCAST_INTENT_ACTION)
-    @UnsupportedAppUsage
+    @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
     public static final String ACTION_SDP_RECORD =
             "android.bluetooth.device.action.SDP_RECORD";
+
+    /** @hide */
+    @IntDef(prefix = "METADATA_", value = {
+            METADATA_MANUFACTURER_NAME,
+            METADATA_MODEL_NAME,
+            METADATA_SOFTWARE_VERSION,
+            METADATA_HARDWARE_VERSION,
+            METADATA_COMPANION_APP,
+            METADATA_MAIN_ICON,
+            METADATA_IS_UNTETHERED_HEADSET,
+            METADATA_UNTETHERED_LEFT_ICON,
+            METADATA_UNTETHERED_RIGHT_ICON,
+            METADATA_UNTETHERED_CASE_ICON,
+            METADATA_UNTETHERED_LEFT_BATTERY,
+            METADATA_UNTETHERED_RIGHT_BATTERY,
+            METADATA_UNTETHERED_CASE_BATTERY,
+            METADATA_UNTETHERED_LEFT_CHARGING,
+            METADATA_UNTETHERED_RIGHT_CHARGING,
+            METADATA_UNTETHERED_CASE_CHARGING,
+            METADATA_ENHANCED_SETTINGS_UI_URI,
+            METADATA_DEVICE_TYPE,
+            METADATA_MAIN_BATTERY,
+            METADATA_MAIN_CHARGING,
+            METADATA_MAIN_LOW_BATTERY_THRESHOLD,
+            METADATA_UNTETHERED_LEFT_LOW_BATTERY_THRESHOLD,
+            METADATA_UNTETHERED_RIGHT_LOW_BATTERY_THRESHOLD,
+            METADATA_UNTETHERED_CASE_LOW_BATTERY_THRESHOLD})
+    @Retention(RetentionPolicy.SOURCE)
+    public @interface MetadataKey{}
 
     /**
      * Maximum length of a metadata entry, this is to avoid exploding Bluetooth
@@ -647,6 +677,89 @@ public final class BluetoothDevice implements Parcelable {
     public static final int METADATA_ENHANCED_SETTINGS_UI_URI = 16;
 
     /**
+     * Type of the Bluetooth device, must be within the list of
+     * BluetoothDevice.DEVICE_TYPE_*
+     * Data type should be {@String} as {@link Byte} array.
+     * @hide
+     */
+    @SystemApi
+    public static final int METADATA_DEVICE_TYPE = 17;
+
+    /**
+     * Battery level of the Bluetooth device, use when the Bluetooth device
+     * does not support HFP battery indicator.
+     * Data type should be {@String} as {@link Byte} array.
+     * @hide
+     */
+    @SystemApi
+    public static final int METADATA_MAIN_BATTERY = 18;
+
+    /**
+     * Whether the device is charging.
+     * Data type should be {@String} as {@link Byte} array.
+     * @hide
+     */
+    @SystemApi
+    public static final int METADATA_MAIN_CHARGING = 19;
+
+    /**
+     * The battery threshold of the Bluetooth device to show low battery icon.
+     * Data type should be {@String} as {@link Byte} array.
+     * @hide
+     */
+    @SystemApi
+    public static final int METADATA_MAIN_LOW_BATTERY_THRESHOLD = 20;
+
+    /**
+     * The battery threshold of the left headset to show low battery icon.
+     * Data type should be {@String} as {@link Byte} array.
+     * @hide
+     */
+    @SystemApi
+    public static final int METADATA_UNTETHERED_LEFT_LOW_BATTERY_THRESHOLD = 21;
+
+    /**
+     * The battery threshold of the right headset to show low battery icon.
+     * Data type should be {@String} as {@link Byte} array.
+     * @hide
+     */
+    @SystemApi
+    public static final int METADATA_UNTETHERED_RIGHT_LOW_BATTERY_THRESHOLD = 22;
+
+    /**
+     * The battery threshold of the case to show low battery icon.
+     * Data type should be {@String} as {@link Byte} array.
+     * @hide
+     */
+    @SystemApi
+    public static final int METADATA_UNTETHERED_CASE_LOW_BATTERY_THRESHOLD = 23;
+
+    /**
+     * Device type which is used in METADATA_DEVICE_TYPE
+     * Indicates this Bluetooth device is a standard Bluetooth accessory or
+     * not listed in METADATA_DEVICE_TYPE_*.
+     * @hide
+     */
+    @SystemApi
+    public static final String DEVICE_TYPE_DEFAULT = "Default";
+
+    /**
+     * Device type which is used in METADATA_DEVICE_TYPE
+     * Indicates this Bluetooth device is a watch.
+     * @hide
+     */
+    @SystemApi
+    public static final String DEVICE_TYPE_WATCH = "Watch";
+
+    /**
+     * Device type which is used in METADATA_DEVICE_TYPE
+     * Indicates this Bluetooth device is an untethered headset.
+     * @hide
+     */
+    @SystemApi
+    public static final String DEVICE_TYPE_UNTETHERED_HEADSET = "Untethered Headset";
+
+    /**
      * Broadcast Action: This intent is used to broadcast the {@link UUID}
      * wrapped as a {@link android.os.ParcelUuid} of the remote device after it
      * has been fetched. This intent is sent only when the UUIDs of the remote
@@ -790,7 +903,7 @@ public final class BluetoothDevice implements Parcelable {
      *
      * @hide
      */
-    @UnsupportedAppUsage
+    @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
     public static final int UNBOND_REASON_AUTH_FAILED = 1;
 
     /**
@@ -799,7 +912,7 @@ public final class BluetoothDevice implements Parcelable {
      *
      * @hide
      */
-    @UnsupportedAppUsage
+    @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
     public static final int UNBOND_REASON_AUTH_REJECTED = 2;
 
     /**
@@ -814,7 +927,7 @@ public final class BluetoothDevice implements Parcelable {
      *
      * @hide
      */
-    @UnsupportedAppUsage
+    @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
     public static final int UNBOND_REASON_REMOTE_DEVICE_DOWN = 4;
 
     /**
@@ -822,7 +935,7 @@ public final class BluetoothDevice implements Parcelable {
      *
      * @hide
      */
-    @UnsupportedAppUsage
+    @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
     public static final int UNBOND_REASON_DISCOVERY_IN_PROGRESS = 5;
 
     /**
@@ -830,7 +943,7 @@ public final class BluetoothDevice implements Parcelable {
      *
      * @hide
      */
-    @UnsupportedAppUsage
+    @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
     public static final int UNBOND_REASON_AUTH_TIMEOUT = 6;
 
     /**
@@ -838,7 +951,7 @@ public final class BluetoothDevice implements Parcelable {
      *
      * @hide
      */
-    @UnsupportedAppUsage
+    @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
     public static final int UNBOND_REASON_REPEATED_ATTEMPTS = 7;
 
     /**
@@ -847,7 +960,7 @@ public final class BluetoothDevice implements Parcelable {
      *
      * @hide
      */
-    @UnsupportedAppUsage
+    @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
     public static final int UNBOND_REASON_REMOTE_AUTH_CANCELED = 8;
 
     /**
@@ -926,7 +1039,7 @@ public final class BluetoothDevice implements Parcelable {
             "android.bluetooth.device.extra.SDP_RECORD";
 
     /** @hide */
-    @UnsupportedAppUsage
+    @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
     public static final String EXTRA_SDP_SEARCH_STATUS =
             "android.bluetooth.device.extra.SDP_SEARCH_STATUS";
 
@@ -962,6 +1075,21 @@ public final class BluetoothDevice implements Parcelable {
      */
     @SystemApi
     public static final int ACCESS_REJECTED = 2;
+
+    /** @hide */
+    @Retention(RetentionPolicy.SOURCE)
+    @IntDef(
+        prefix = { "TRANSPORT_" },
+        value = {
+            /** Allow host to automatically select a transport (dual-mode only) */
+            TRANSPORT_AUTO,
+            /** Use Classic or BR/EDR transport.*/
+            TRANSPORT_BREDR,
+            /** Use Low Energy transport.*/
+            TRANSPORT_LE,
+        }
+    )
+    public @interface Transport {}
 
     /**
      * No preference of physical transport for GATT connections to remote dual-mode devices
@@ -1034,6 +1162,24 @@ public final class BluetoothDevice implements Parcelable {
     public static final String EXTRA_MAS_INSTANCE =
             "android.bluetooth.device.extra.MAS_INSTANCE";
 
+    /** @hide */
+    @Retention(RetentionPolicy.SOURCE)
+    @IntDef(
+        prefix = { "ADDRESS_TYPE_" },
+        value = {
+            /** Hardware MAC Address */
+            ADDRESS_TYPE_PUBLIC,
+            /** Address is either resolvable, non-resolvable or static.*/
+            ADDRESS_TYPE_RANDOM,
+        }
+    )
+    public @interface AddressType {}
+
+    /** Hardware MAC Address of the device */
+    public static final int ADDRESS_TYPE_PUBLIC = 0;
+    /** Address is either resolvable, non-resolvable or static. */
+    public static final int ADDRESS_TYPE_RANDOM = 1;
+
     /**
      * Lazy initialization. Guaranteed final after first object constructed, or
      * getService() called.
@@ -1042,6 +1188,7 @@ public final class BluetoothDevice implements Parcelable {
     private static volatile IBluetooth sService;
 
     private final String mAddress;
+    @AddressType private final int mAddressType;
 
     /*package*/
     @UnsupportedAppUsage
@@ -1076,6 +1223,10 @@ public final class BluetoothDevice implements Parcelable {
         public void onBrEdrDown() {
             if (DBG) Log.d(TAG, "onBrEdrDown: reached BLE ON state");
         }
+
+        public void onOobData(@Transport int transport, OobData oobData) {
+            if (DBG) Log.d(TAG, "onOobData: got data");
+        }
     };
 
     /**
@@ -1096,6 +1247,7 @@ public final class BluetoothDevice implements Parcelable {
         }
 
         mAddress = address;
+        mAddressType = ADDRESS_TYPE_PUBLIC;
     }
 
     @Override
@@ -1176,7 +1328,11 @@ public final class BluetoothDevice implements Parcelable {
         try {
             String name = service.getRemoteName(this);
             if (name != null) {
-                return name.replaceAll("[\\t\\n\\r]+", " ");
+                // remove whitespace characters from the name
+                return name
+                        .replace('\t', ' ')
+                        .replace('\n', ' ')
+                        .replace('\r', ' ');
             }
             return null;
         } catch (RemoteException e) {
@@ -1243,7 +1399,7 @@ public final class BluetoothDevice implements Parcelable {
      * @return true on success, false on error
      * @hide
      */
-    @UnsupportedAppUsage
+    @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
     @RequiresPermission(Manifest.permission.BLUETOOTH)
     public boolean setAlias(@NonNull String alias) {
         final IBluetooth service = sService;
@@ -1307,7 +1463,6 @@ public final class BluetoothDevice implements Parcelable {
      * the bonding process completes, and its result.
      * <p>Android system services will handle the necessary user interactions
      * to confirm and complete the bonding process.
-     * <p>Requires {@link android.Manifest.permission#BLUETOOTH_ADMIN}.
      *
      * @param transport The transport to use for the pairing procedure.
      * @return false on immediate error, true if bonding will begin
@@ -1315,8 +1470,9 @@ public final class BluetoothDevice implements Parcelable {
      * @hide
      */
     @UnsupportedAppUsage
+    @RequiresPermission(Manifest.permission.BLUETOOTH_ADMIN)
     public boolean createBond(int transport) {
-        return createBondOutOfBand(transport, null);
+        return createBondInternal(transport, null, null);
     }
 
     /**
@@ -1330,21 +1486,38 @@ public final class BluetoothDevice implements Parcelable {
      * <p>Android system services will handle the necessary user interactions
      * to confirm and complete the bonding process.
      *
-     * <p>Requires {@link android.Manifest.permission#BLUETOOTH_ADMIN}.
+     * <p>There are two possible versions of OOB Data.  This data can come in as
+     * P192 or P256.  This is a reference to the cryptography used to generate the key.
+     * The caller may pass one or both.  If both types of data are passed, then the
+     * P256 data will be preferred, and thus used.
      *
      * @param transport - Transport to use
-     * @param oobData - Out Of Band data
+     * @param remoteP192Data - Out Of Band data (P192) or null
+     * @param remoteP256Data - Out Of Band data (P256) or null
      * @return false on immediate error, true if bonding will begin
      * @hide
      */
-    public boolean createBondOutOfBand(int transport, OobData oobData) {
+    @SystemApi
+    @RequiresPermission(Manifest.permission.BLUETOOTH_PRIVILEGED)
+    public boolean createBondOutOfBand(int transport, @Nullable OobData remoteP192Data,
+            @Nullable OobData remoteP256Data) {
+        if (remoteP192Data == null && remoteP256Data == null) {
+            throw new IllegalArgumentException(
+                "One or both arguments for the OOB data types are required to not be null."
+                + "  Please use createBond() instead if you do not have OOB data to pass.");
+        }
+        return createBondInternal(transport, remoteP192Data, remoteP256Data);
+    }
+
+    private boolean createBondInternal(int transport, @Nullable OobData remoteP192Data,
+            @Nullable OobData remoteP256Data) {
         final IBluetooth service = sService;
         if (service == null) {
             Log.w(TAG, "BT not enabled, createBondOutOfBand failed");
             return false;
         }
         try {
-            return service.createBond(this, transport, oobData);
+            return service.createBond(this, transport, remoteP192Data, remoteP256Data);
         } catch (RemoteException e) {
             Log.e(TAG, "", e);
         }
@@ -1388,27 +1561,6 @@ public final class BluetoothDevice implements Parcelable {
             Log.e(TAG, "", e);
         }
         return;
-    }
-
-    /**
-     * Set the Out Of Band data for a remote device to be used later
-     * in the pairing mechanism. Users can obtain this data through other
-     * trusted channels
-     *
-     * <p>Requires {@link android.Manifest.permission#BLUETOOTH_ADMIN}.
-     *
-     * @param hash Simple Secure pairing hash
-     * @param randomizer The random key obtained using OOB
-     * @return false on error; true otherwise
-     * @hide
-     */
-    public boolean setDeviceOutOfBandData(byte[] hash, byte[] randomizer) {
-        //TODO(BT)
-      /*
-      try {
-        return sService.setDeviceOutOfBandData(this, hash, randomizer);
-      } catch (RemoteException e) {Log.e(TAG, "", e);} */
-        return false;
     }
 
     /**
@@ -1614,13 +1766,14 @@ public final class BluetoothDevice implements Parcelable {
      *
      * <p>This API is asynchronous and {@link #ACTION_UUID} intent is sent,
      * with the UUIDs supported by the remote end. If there is an error
-     * in getting the SDP records or if the process takes a long time,
-     * {@link #ACTION_UUID} intent is sent with the UUIDs that is currently
-     * present in the cache. Clients should use the {@link #getUuids} to get UUIDs
-     * if service discovery is not to be performed.
+     * in getting the SDP records or if the process takes a long time, or the device is bonding and
+     * we have its UUIDs cached, {@link #ACTION_UUID} intent is sent with the UUIDs that is
+     * currently present in the cache. Clients should use the {@link #getUuids} to get UUIDs
+     * if service discovery is not to be performed. If there is an ongoing bonding process,
+     * service discovery or device inquiry, the request will be queued.
      *
-     * @return False if the sanity check fails, True if the process of initiating an ACL connection
-     * to the remote device was started.
+     * @return False if the check fails, True if the process of initiating an ACL connection
+     * to the remote device was started or cached UUIDs will be broadcast.
      */
     @RequiresPermission(Manifest.permission.BLUETOOTH)
     public boolean fetchUuidsWithSdp() {
@@ -1653,7 +1806,7 @@ public final class BluetoothDevice implements Parcelable {
      * The object type will match one of the SdpXxxRecord types, depending on the UUID searched
      * for.
      *
-     * @return False if the sanity check fails, True if the process
+     * @return False if the check fails, True if the process
      *               of initiating an ACL connection to the remote device
      *               was started.
      */
@@ -1733,7 +1886,7 @@ public final class BluetoothDevice implements Parcelable {
      * @return true pin has been set false for error
      * @hide
      */
-    @UnsupportedAppUsage
+    @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
     @RequiresPermission(Manifest.permission.BLUETOOTH_ADMIN)
     public boolean setPin(@NonNull String pin) {
         byte[] pinBytes = convertPinToBytes(pin);
@@ -2005,7 +2158,7 @@ public final class BluetoothDevice implements Parcelable {
      * socket will be encrypted.
      * <p> Use this socket only if an authenticated socket link is possible.
      * Authentication refers to the authentication of the link key to
-     * prevent man-in-the-middle type of attacks.
+     * prevent person-in-the-middle type of attacks.
      * For example, for Bluetooth 2.1 devices, if any of the devices does not
      * have an input and output capability or just has the ability to
      * display a numeric key, a secure socket connection is not possible.
@@ -2040,7 +2193,7 @@ public final class BluetoothDevice implements Parcelable {
      * socket will be encrypted.
      * <p> Use this socket only if an authenticated socket link is possible.
      * Authentication refers to the authentication of the link key to
-     * prevent man-in-the-middle type of attacks.
+     * prevent person-in-the-middle type of attacks.
      * For example, for Bluetooth 2.1 devices, if any of the devices does not
      * have an input and output capability or just has the ability to
      * display a numeric key, a secure socket connection is not possible.
@@ -2097,7 +2250,7 @@ public final class BluetoothDevice implements Parcelable {
      * socket will be encrypted.
      * <p> Use this socket only if an authenticated socket link is possible.
      * Authentication refers to the authentication of the link key to
-     * prevent man-in-the-middle type of attacks.
+     * prevent person-in-the-middle type of attacks.
      * For example, for Bluetooth 2.1 devices, if any of the devices does not
      * have an input and output capability or just has the ability to
      * display a numeric key, a secure socket connection is not possible.
@@ -2129,7 +2282,7 @@ public final class BluetoothDevice implements Parcelable {
      * Create an RFCOMM {@link BluetoothSocket} socket ready to start an insecure
      * outgoing connection to this remote device using SDP lookup of uuid.
      * <p> The communication channel will not have an authenticated link key
-     * i.e it will be subject to man-in-the-middle attacks. For Bluetooth 2.1
+     * i.e it will be subject to person-in-the-middle attacks. For Bluetooth 2.1
      * devices, the link key will be encrypted, as encryption is mandatory.
      * For legacy devices (pre Bluetooth 2.1 devices) the link key will
      * be not be encrypted. Use {@link #createRfcommSocketToServiceRecord} if an
@@ -2347,7 +2500,7 @@ public final class BluetoothDevice implements Parcelable {
      * operations.
      * @hide
      */
-    @UnsupportedAppUsage
+    @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
     public BluetoothGatt connectGatt(Context context, boolean autoConnect,
             BluetoothGattCallback callback, int transport,
             boolean opportunistic, int phy, Handler handler) {
@@ -2427,7 +2580,7 @@ public final class BluetoothDevice implements Parcelable {
      * <p>The remote device will be authenticated and communication on this socket will be
      * encrypted.
      * <p> Use this socket if an authenticated socket link is possible. Authentication refers
-     * to the authentication of the link key to prevent man-in-the-middle type of attacks.
+     * to the authentication of the link key to prevent person-in-the-middle type of attacks.
      *
      * @param psm dynamic PSM value from remote device
      * @return a CoC #BluetoothSocket ready for an outgoing connection
@@ -2454,7 +2607,7 @@ public final class BluetoothDevice implements Parcelable {
      * <p>Use {@link BluetoothSocket#connect} to initiate the outgoing connection.
      * <p>Application using this API is responsible for obtaining PSM value from remote device.
      * <p> The communication channel may not have an authenticated link key, i.e. it may be subject
-     * to man-in-the-middle attacks. Use {@link #createL2capChannel(int)} if an encrypted and
+     * to person-in-the-middle attacks. Use {@link #createL2capChannel(int)} if an encrypted and
      * authenticated communication channel is possible.
      *
      * @param psm dynamic PSM value from remote device
@@ -2491,7 +2644,7 @@ public final class BluetoothDevice implements Parcelable {
     */
     @SystemApi
     @RequiresPermission(Manifest.permission.BLUETOOTH_PRIVILEGED)
-    public boolean setMetadata(int key, @NonNull byte[] value) {
+    public boolean setMetadata(@MetadataKey int key, @NonNull byte[] value) {
         final IBluetooth service = sService;
         if (service == null) {
             Log.e(TAG, "Bluetooth is not enabled. Cannot set metadata");
@@ -2519,7 +2672,7 @@ public final class BluetoothDevice implements Parcelable {
     @SystemApi
     @Nullable
     @RequiresPermission(Manifest.permission.BLUETOOTH_PRIVILEGED)
-    public byte[] getMetadata(int key) {
+    public byte[] getMetadata(@MetadataKey int key) {
         final IBluetooth service = sService;
         if (service == null) {
             Log.e(TAG, "Bluetooth is not enabled. Cannot get metadata");
@@ -2531,5 +2684,15 @@ public final class BluetoothDevice implements Parcelable {
             Log.e(TAG, "getMetadata fail", e);
             return null;
         }
+    }
+
+    /**
+     * Get the maxinum metadata key ID.
+     *
+     * @return the last supported metadata key
+     * @hide
+     */
+    public static @MetadataKey int getMaxMetadataKey() {
+        return METADATA_UNTETHERED_CASE_LOW_BATTERY_THRESHOLD;
     }
 }

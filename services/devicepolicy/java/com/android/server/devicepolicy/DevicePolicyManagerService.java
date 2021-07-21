@@ -91,7 +91,6 @@ import static android.net.NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK;
 import static android.os.UserManagerInternal.OWNER_TYPE_DEVICE_OWNER;
 import static android.os.UserManagerInternal.OWNER_TYPE_PROFILE_OWNER;
 import static android.os.UserManagerInternal.OWNER_TYPE_PROFILE_OWNER_OF_ORGANIZATION_OWNED_DEVICE;
-import static android.provider.Settings.Global.PRIVATE_DNS_MODE;
 import static android.provider.Settings.Global.PRIVATE_DNS_SPECIFIER;
 import static android.provider.Telephony.Carriers.DPC_URI;
 import static android.provider.Telephony.Carriers.ENFORCE_KEY;
@@ -195,10 +194,11 @@ import android.location.LocationManager;
 import android.media.AudioManager;
 import android.media.IAudioService;
 import android.net.ConnectivityManager;
+import android.net.ConnectivitySettingsManager;
 import android.net.IIpConnectivityMetrics;
-import android.net.NetworkUtils;
 import android.net.ProxyInfo;
 import android.net.Uri;
+import android.net.VpnManager;
 import android.net.metrics.IpConnectivityLog;
 import android.net.wifi.WifiManager;
 import android.os.Binder;
@@ -268,6 +268,7 @@ import com.android.internal.annotations.VisibleForTesting;
 import com.android.internal.compat.IPlatformCompat;
 import com.android.internal.logging.MetricsLogger;
 import com.android.internal.messages.nano.SystemMessageProto.SystemMessage;
+import com.android.internal.net.NetworkUtilsInternal;
 import com.android.internal.notification.SystemNotificationChannels;
 import com.android.internal.os.BackgroundThread;
 import com.android.internal.statusbar.IStatusBarService;
@@ -286,6 +287,7 @@ import com.android.internal.widget.LockPatternUtils;
 import com.android.internal.widget.LockSettingsInternal;
 import com.android.internal.widget.LockscreenCredential;
 import com.android.internal.widget.PasswordValidationError;
+import com.android.net.module.util.ProxyUtils;
 import com.android.server.LocalServices;
 import com.android.server.LockGuard;
 import com.android.server.PersistentDataBlockManagerInternal;
@@ -308,6 +310,7 @@ import org.xmlpull.v1.XmlPullParser;
 import org.xmlpull.v1.XmlPullParserException;
 import org.xmlpull.v1.XmlSerializer;
 
+import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileDescriptor;
 import java.io.FileInputStream;
@@ -317,6 +320,9 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.lang.reflect.Constructor;
 import java.nio.charset.StandardCharsets;
+import java.security.cert.CertificateException;
+import java.security.cert.CertificateFactory;
+import java.security.cert.X509Certificate;
 import java.text.DateFormat;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -481,38 +487,38 @@ public class DevicePolicyManagerService extends BaseIDevicePolicyManager {
     private static final int STATUS_BAR_DISABLE2_MASK =
             StatusBarManager.DISABLE2_QUICK_SETTINGS;
 
-    private static final Set<String> SECURE_SETTINGS_WHITELIST;
-    private static final Set<String> SECURE_SETTINGS_DEVICEOWNER_WHITELIST;
-    private static final Set<String> GLOBAL_SETTINGS_WHITELIST;
+    private static final Set<String> SECURE_SETTINGS_ALLOWLIST;
+    private static final Set<String> SECURE_SETTINGS_DEVICEOWNER_ALLOWLIST;
+    private static final Set<String> GLOBAL_SETTINGS_ALLOWLIST;
     private static final Set<String> GLOBAL_SETTINGS_DEPRECATED;
-    private static final Set<String> SYSTEM_SETTINGS_WHITELIST;
+    private static final Set<String> SYSTEM_SETTINGS_ALLOWLIST;
     private static final Set<Integer> DA_DISALLOWED_POLICIES;
     // A collection of user restrictions that are deprecated and should simply be ignored.
     private static final Set<String> DEPRECATED_USER_RESTRICTIONS;
     private static final String AB_DEVICE_KEY = "ro.build.ab_update";
 
     static {
-        SECURE_SETTINGS_WHITELIST = new ArraySet<>();
-        SECURE_SETTINGS_WHITELIST.add(Settings.Secure.DEFAULT_INPUT_METHOD);
-        SECURE_SETTINGS_WHITELIST.add(Settings.Secure.SKIP_FIRST_USE_HINTS);
-        SECURE_SETTINGS_WHITELIST.add(Settings.Secure.INSTALL_NON_MARKET_APPS);
+        SECURE_SETTINGS_ALLOWLIST = new ArraySet<>();
+        SECURE_SETTINGS_ALLOWLIST.add(Settings.Secure.DEFAULT_INPUT_METHOD);
+        SECURE_SETTINGS_ALLOWLIST.add(Settings.Secure.SKIP_FIRST_USE_HINTS);
+        SECURE_SETTINGS_ALLOWLIST.add(Settings.Secure.INSTALL_NON_MARKET_APPS);
 
-        SECURE_SETTINGS_DEVICEOWNER_WHITELIST = new ArraySet<>();
-        SECURE_SETTINGS_DEVICEOWNER_WHITELIST.addAll(SECURE_SETTINGS_WHITELIST);
-        SECURE_SETTINGS_DEVICEOWNER_WHITELIST.add(Settings.Secure.LOCATION_MODE);
+        SECURE_SETTINGS_DEVICEOWNER_ALLOWLIST = new ArraySet<>();
+        SECURE_SETTINGS_DEVICEOWNER_ALLOWLIST.addAll(SECURE_SETTINGS_ALLOWLIST);
+        SECURE_SETTINGS_DEVICEOWNER_ALLOWLIST.add(Settings.Secure.LOCATION_MODE);
 
-        GLOBAL_SETTINGS_WHITELIST = new ArraySet<>();
-        GLOBAL_SETTINGS_WHITELIST.add(Settings.Global.ADB_ENABLED);
-        GLOBAL_SETTINGS_WHITELIST.add(Settings.Global.ADB_WIFI_ENABLED);
-        GLOBAL_SETTINGS_WHITELIST.add(Settings.Global.AUTO_TIME);
-        GLOBAL_SETTINGS_WHITELIST.add(Settings.Global.AUTO_TIME_ZONE);
-        GLOBAL_SETTINGS_WHITELIST.add(Settings.Global.DATA_ROAMING);
-        GLOBAL_SETTINGS_WHITELIST.add(Settings.Global.USB_MASS_STORAGE_ENABLED);
-        GLOBAL_SETTINGS_WHITELIST.add(Settings.Global.WIFI_SLEEP_POLICY);
-        GLOBAL_SETTINGS_WHITELIST.add(Settings.Global.STAY_ON_WHILE_PLUGGED_IN);
-        GLOBAL_SETTINGS_WHITELIST.add(Settings.Global.WIFI_DEVICE_OWNER_CONFIGS_LOCKDOWN);
-        GLOBAL_SETTINGS_WHITELIST.add(Settings.Global.PRIVATE_DNS_MODE);
-        GLOBAL_SETTINGS_WHITELIST.add(Settings.Global.PRIVATE_DNS_SPECIFIER);
+        GLOBAL_SETTINGS_ALLOWLIST = new ArraySet<>();
+        GLOBAL_SETTINGS_ALLOWLIST.add(Settings.Global.ADB_ENABLED);
+        GLOBAL_SETTINGS_ALLOWLIST.add(Settings.Global.ADB_WIFI_ENABLED);
+        GLOBAL_SETTINGS_ALLOWLIST.add(Settings.Global.AUTO_TIME);
+        GLOBAL_SETTINGS_ALLOWLIST.add(Settings.Global.AUTO_TIME_ZONE);
+        GLOBAL_SETTINGS_ALLOWLIST.add(Settings.Global.DATA_ROAMING);
+        GLOBAL_SETTINGS_ALLOWLIST.add(Settings.Global.USB_MASS_STORAGE_ENABLED);
+        GLOBAL_SETTINGS_ALLOWLIST.add(Settings.Global.WIFI_SLEEP_POLICY);
+        GLOBAL_SETTINGS_ALLOWLIST.add(Settings.Global.STAY_ON_WHILE_PLUGGED_IN);
+        GLOBAL_SETTINGS_ALLOWLIST.add(Settings.Global.WIFI_DEVICE_OWNER_CONFIGS_LOCKDOWN);
+        GLOBAL_SETTINGS_ALLOWLIST.add(Settings.Global.PRIVATE_DNS_MODE);
+        GLOBAL_SETTINGS_ALLOWLIST.add(Settings.Global.PRIVATE_DNS_SPECIFIER);
 
         GLOBAL_SETTINGS_DEPRECATED = new ArraySet<>();
         GLOBAL_SETTINGS_DEPRECATED.add(Settings.Global.BLUETOOTH_ON);
@@ -521,11 +527,11 @@ public class DevicePolicyManagerService extends BaseIDevicePolicyManager {
         GLOBAL_SETTINGS_DEPRECATED.add(Settings.Global.NETWORK_PREFERENCE);
         GLOBAL_SETTINGS_DEPRECATED.add(Settings.Global.WIFI_ON);
 
-        SYSTEM_SETTINGS_WHITELIST = new ArraySet<>();
-        SYSTEM_SETTINGS_WHITELIST.add(Settings.System.SCREEN_BRIGHTNESS);
-        SYSTEM_SETTINGS_WHITELIST.add(Settings.System.SCREEN_BRIGHTNESS_FLOAT);
-        SYSTEM_SETTINGS_WHITELIST.add(Settings.System.SCREEN_BRIGHTNESS_MODE);
-        SYSTEM_SETTINGS_WHITELIST.add(Settings.System.SCREEN_OFF_TIMEOUT);
+        SYSTEM_SETTINGS_ALLOWLIST = new ArraySet<>();
+        SYSTEM_SETTINGS_ALLOWLIST.add(Settings.System.SCREEN_BRIGHTNESS);
+        SYSTEM_SETTINGS_ALLOWLIST.add(Settings.System.SCREEN_BRIGHTNESS_FLOAT);
+        SYSTEM_SETTINGS_ALLOWLIST.add(Settings.System.SCREEN_BRIGHTNESS_MODE);
+        SYSTEM_SETTINGS_ALLOWLIST.add(Settings.System.SCREEN_OFF_TIMEOUT);
 
         DA_DISALLOWED_POLICIES = new ArraySet<>();
         DA_DISALLOWED_POLICIES.add(DeviceAdminInfo.USES_POLICY_DISABLE_CAMERA);
@@ -1237,13 +1243,13 @@ public class DevicePolicyManagerService extends BaseIDevicePolicyManager {
         String startUserSessionMessage = null;
         String endUserSessionMessage = null;
 
-        // The whitelist of packages that can access cross profile calendar APIs.
-        // This whitelist should be in default an empty list, which indicates that no package
-        // is whitelisted.
+        // The allowlist of packages that can access cross profile calendar APIs.
+        // This allowlist should be in default an empty list, which indicates that no package
+        // is allowed.
         List<String> mCrossProfileCalendarPackages = Collections.emptyList();
 
-        // The whitelist of packages that the admin has enabled to be able to request consent from
-        // the user to communicate cross-profile. By default, no packages are whitelisted, which is
+        // The allowlist of packages that the admin has enabled to be able to request consent from
+        // the user to communicate cross-profile. By default, no packages are allowed, which is
         // represented as an empty list.
         List<String> mCrossProfilePackages = Collections.emptyList();
 
@@ -2250,6 +2256,10 @@ public class DevicePolicyManagerService extends BaseIDevicePolicyManager {
             return mContext.getSystemService(ConnectivityManager.class);
         }
 
+        VpnManager getVpnManager() {
+            return mContext.getSystemService(VpnManager.class);
+        }
+
         LocationManager getLocationManager() {
             return mContext.getSystemService(LocationManager.class);
         }
@@ -2826,7 +2836,7 @@ public class DevicePolicyManagerService extends BaseIDevicePolicyManager {
 
         final IIntentSender.Stub mLocalSender = new IIntentSender.Stub() {
             @Override
-            public void send(int code, Intent intent, String resolvedType, IBinder whitelistToken,
+            public void send(int code, Intent intent, String resolvedType, IBinder allowlistToken,
                     IIntentReceiver finishedReceiver, String requiredPermission, Bundle options) {
                 final int status = intent.getIntExtra(
                         PackageInstaller.EXTRA_STATUS, PackageInstaller.STATUS_FAILURE);
@@ -6496,7 +6506,7 @@ public class DevicePolicyManagerService extends BaseIDevicePolicyManager {
             enforceCanManageScope(who, callerPackage, DeviceAdminInfo.USES_POLICY_PROFILE_OWNER,
                     DELEGATION_CERT_INSTALL);
         }
-        final KeyGenParameterSpec keySpec = parcelableKeySpec.getSpec();
+        KeyGenParameterSpec keySpec = parcelableKeySpec.getSpec();
         final String alias = keySpec.getKeystoreAlias();
         if (TextUtils.isEmpty(alias)) {
             throw new IllegalArgumentException("Empty alias provided.");
@@ -6508,9 +6518,15 @@ public class DevicePolicyManagerService extends BaseIDevicePolicyManager {
             return false;
         }
 
-        if (deviceIdAttestationRequired && (keySpec.getAttestationChallenge() == null)) {
-            throw new IllegalArgumentException(
-                    "Requested Device ID attestation but challenge is empty.");
+        if (deviceIdAttestationRequired) {
+            if (keySpec.getAttestationChallenge() == null) {
+                throw new IllegalArgumentException(
+                        "Requested Device ID attestation but challenge is empty.");
+            }
+            KeyGenParameterSpec.Builder specBuilder = new KeyGenParameterSpec.Builder(keySpec);
+            specBuilder.setAttestationIds(attestationUtilsFlags);
+            specBuilder.setDevicePropertiesAttestationIncluded(true);
+            keySpec = specBuilder.build();
         }
 
         final UserHandle userHandle = mInjector.binderGetCallingUserHandle();
@@ -6520,15 +6536,8 @@ public class DevicePolicyManagerService extends BaseIDevicePolicyManager {
                     KeyChain.bindAsUser(mContext, userHandle)) {
                 IKeyChainService keyChain = keyChainConnection.getService();
 
-                // Copy the provided keySpec, excluding the attestation challenge, which will be
-                // used later for requesting key attestation record.
-                final KeyGenParameterSpec noAttestationSpec =
-                    new KeyGenParameterSpec.Builder(keySpec)
-                        .setAttestationChallenge(null)
-                        .build();
-
                 final int generationResult = keyChain.generateKeyPair(algorithm,
-                    new ParcelableKeyGenParameterSpec(noAttestationSpec));
+                        new ParcelableKeyGenParameterSpec(keySpec));
                 if (generationResult != KeyChain.KEY_GEN_SUCCESS) {
                     Log.e(LOG_TAG, String.format(
                             "KeyChain failed to generate a keypair, error %d.", generationResult));
@@ -6537,6 +6546,9 @@ public class DevicePolicyManagerService extends BaseIDevicePolicyManager {
                             throw new ServiceSpecificException(
                                     DevicePolicyManager.KEY_GEN_STRONGBOX_UNAVAILABLE,
                                     String.format("KeyChain error: %d", generationResult));
+                        case KeyChain.KEY_ATTESTATION_CANNOT_ATTEST_IDS:
+                            throw new UnsupportedOperationException(
+                                "Device does not support Device ID attestation.");
                         default:
                             return false;
                     }
@@ -6549,22 +6561,26 @@ public class DevicePolicyManagerService extends BaseIDevicePolicyManager {
                 // that UID.
                 keyChain.setGrant(callingUid, alias, true);
 
-                final byte[] attestationChallenge = keySpec.getAttestationChallenge();
-                if (attestationChallenge != null) {
-                    final int attestationResult = keyChain.attestKey(
-                            alias, attestationChallenge, attestationUtilsFlags, attestationChain);
-                    if (attestationResult != KeyChain.KEY_ATTESTATION_SUCCESS) {
-                        Log.e(LOG_TAG, String.format(
-                                "Attestation for %s failed (rc=%d), deleting key.",
-                                alias, attestationResult));
-                        keyChain.removeKeyPair(alias);
-                        if (attestationResult == KeyChain.KEY_ATTESTATION_CANNOT_ATTEST_IDS) {
-                            throw new UnsupportedOperationException(
-                                    "Device does not support Device ID attestation.");
+                try {
+                    final List<byte[]> encodedCerts = new ArrayList();
+                    final CertificateFactory certFactory = CertificateFactory.getInstance("X.509");
+                    final byte[] certChainBytes = keyChain.getCaCertificates(alias);
+                    encodedCerts.add(keyChain.getCertificate(alias));
+                    if (certChainBytes != null) {
+                        final Collection<X509Certificate> certs =
+                                (Collection<X509Certificate>) certFactory.generateCertificates(
+                                    new ByteArrayInputStream(certChainBytes));
+                        for (X509Certificate cert : certs) {
+                            encodedCerts.add(cert.getEncoded());
                         }
-                        return false;
                     }
+
+                    attestationChain.shallowCopyFrom(new KeymasterCertificateChain(encodedCerts));
+                } catch (CertificateException e) {
+                    Log.e(LOG_TAG, "While retrieving certificate chain.", e);
+                    return false;
                 }
+
                 final boolean isDelegate = (who == null);
                 DevicePolicyEventLogger
                         .createEvent(DevicePolicyEnums.GENERATE_KEY_PAIR)
@@ -7082,7 +7098,7 @@ public class DevicePolicyManagerService extends BaseIDevicePolicyManager {
      */
     @Override
     public boolean setAlwaysOnVpnPackage(ComponentName who, String vpnPackage, boolean lockdown,
-            List<String> lockdownWhitelist)
+            List<String> lockdownAllowlist)
             throws SecurityException {
         enforceProfileOrDeviceOwner(who);
 
@@ -7094,18 +7110,18 @@ public class DevicePolicyManagerService extends BaseIDevicePolicyManager {
                         DevicePolicyManager.ERROR_VPN_PACKAGE_NOT_FOUND, vpnPackage);
             }
 
-            if (vpnPackage != null && lockdown && lockdownWhitelist != null) {
-                for (String packageName : lockdownWhitelist) {
+            if (vpnPackage != null && lockdown && lockdownAllowlist != null) {
+                for (String packageName : lockdownAllowlist) {
                     if (!isPackageInstalledForUser(packageName, userId)) {
-                        Slog.w(LOG_TAG, "Non-existent package in VPN whitelist: " + packageName);
+                        Slog.w(LOG_TAG, "Non-existent package in VPN allowlist: " + packageName);
                         throw new ServiceSpecificException(
                                 DevicePolicyManager.ERROR_VPN_PACKAGE_NOT_FOUND, packageName);
                     }
                 }
             }
             // If some package is uninstalled after the check above, it will be ignored by CM.
-            if (!mInjector.getConnectivityManager().setAlwaysOnVpnPackageForUser(
-                    userId, vpnPackage, lockdown, lockdownWhitelist)) {
+            if (!mInjector.getVpnManager().setAlwaysOnVpnPackageForUser(
+                    userId, vpnPackage, lockdown, lockdownAllowlist)) {
                 throw new UnsupportedOperationException();
             }
             DevicePolicyEventLogger
@@ -7113,7 +7129,7 @@ public class DevicePolicyManagerService extends BaseIDevicePolicyManager {
                     .setAdmin(who)
                     .setStrings(vpnPackage)
                     .setBoolean(lockdown)
-                    .setInt(lockdownWhitelist != null ? lockdownWhitelist.size() : 0)
+                    .setInt(lockdownAllowlist != null ? lockdownAllowlist.size() : 0)
                     .write();
         });
         synchronized (getLockObject()) {
@@ -7135,7 +7151,7 @@ public class DevicePolicyManagerService extends BaseIDevicePolicyManager {
 
         final int userId = mInjector.userHandleGetCallingUserId();
         return mInjector.binderWithCleanCallingIdentity(
-                () -> mInjector.getConnectivityManager().getAlwaysOnVpnPackageForUser(userId));
+                () -> mInjector.getVpnManager().getAlwaysOnVpnPackageForUser(userId));
     }
 
     @Override
@@ -7153,7 +7169,7 @@ public class DevicePolicyManagerService extends BaseIDevicePolicyManager {
 
         final int userId = mInjector.userHandleGetCallingUserId();
         return mInjector.binderWithCleanCallingIdentity(
-                () -> mInjector.getConnectivityManager().isVpnLockdownEnabled(userId));
+                () -> mInjector.getVpnManager().isVpnLockdownEnabled(userId));
     }
 
     @Override
@@ -7166,13 +7182,13 @@ public class DevicePolicyManagerService extends BaseIDevicePolicyManager {
     }
 
     @Override
-    public List<String> getAlwaysOnVpnLockdownWhitelist(ComponentName admin)
+    public List<String> getAlwaysOnVpnLockdownAllowlist(ComponentName admin)
             throws SecurityException {
         enforceProfileOrDeviceOwner(admin);
 
         final int userId = mInjector.userHandleGetCallingUserId();
         return mInjector.binderWithCleanCallingIdentity(
-                () -> mInjector.getConnectivityManager().getVpnLockdownWhitelist(userId));
+                () -> mInjector.getVpnManager().getVpnLockdownAllowlist(userId));
     }
 
     private void forceWipeDeviceNoLock(boolean wipeExtRequested, String reason, boolean wipeEuicc) {
@@ -7774,7 +7790,8 @@ public class DevicePolicyManagerService extends BaseIDevicePolicyManager {
         }
         exclusionList = exclusionList.trim();
 
-        ProxyInfo proxyProperties = new ProxyInfo(data[0], proxyPort, exclusionList);
+        ProxyInfo proxyProperties = ProxyInfo.buildDirectProxy(data[0], proxyPort,
+                ProxyUtils.exclusionStringAsList(exclusionList));
         if (!proxyProperties.isValid()) {
             Slog.e(LOG_TAG, "Invalid proxy properties, ignoring: " + proxyProperties.toString());
             return;
@@ -11930,7 +11947,7 @@ public class DevicePolicyManagerService extends BaseIDevicePolicyManager {
                 return;
             }
 
-            if (!GLOBAL_SETTINGS_WHITELIST.contains(setting)
+            if (!GLOBAL_SETTINGS_ALLOWLIST.contains(setting)
                     && !UserManager.isDeviceInDemoMode(mContext)) {
                 throw new SecurityException(String.format(
                         "Permission denial: device owners cannot update %1$s", setting));
@@ -11958,7 +11975,7 @@ public class DevicePolicyManagerService extends BaseIDevicePolicyManager {
         synchronized (getLockObject()) {
             getActiveAdminForCallerLocked(who, DeviceAdminInfo.USES_POLICY_PROFILE_OWNER);
 
-            if (!SYSTEM_SETTINGS_WHITELIST.contains(setting)) {
+            if (!SYSTEM_SETTINGS_ALLOWLIST.contains(setting)) {
                 throw new SecurityException(String.format(
                         "Permission denial: device owners cannot update %1$s", setting));
             }
@@ -12102,12 +12119,12 @@ public class DevicePolicyManagerService extends BaseIDevicePolicyManager {
             getActiveAdminForCallerLocked(who, DeviceAdminInfo.USES_POLICY_PROFILE_OWNER);
 
             if (isDeviceOwner(who, callingUserId)) {
-                if (!SECURE_SETTINGS_DEVICEOWNER_WHITELIST.contains(setting)
+                if (!SECURE_SETTINGS_DEVICEOWNER_ALLOWLIST.contains(setting)
                         && !isCurrentUserDemo()) {
                     throw new SecurityException(String.format(
                             "Permission denial: Device owners cannot update %1$s", setting));
                 }
-            } else if (!SECURE_SETTINGS_WHITELIST.contains(setting) && !isCurrentUserDemo()) {
+            } else if (!SECURE_SETTINGS_ALLOWLIST.contains(setting) && !isCurrentUserDemo()) {
                 throw new SecurityException(String.format(
                         "Permission denial: Profile owners cannot update %1$s", setting));
             }
@@ -12489,6 +12506,22 @@ public class DevicePolicyManagerService extends BaseIDevicePolicyManager {
         public boolean isActiveAdminWithPolicy(int uid, int reqPolicy) {
             synchronized (getLockObject()) {
                 return getActiveAdminWithPolicyForUidLocked(null, reqPolicy, uid) != null;
+            }
+        }
+
+        @Override
+        public boolean isActiveDeviceOwner(int uid) {
+            synchronized (getLockObject()) {
+                return getActiveAdminWithPolicyForUidLocked(
+                        null, DeviceAdminInfo.USES_POLICY_DEVICE_OWNER, uid) != null;
+            }
+        }
+
+        @Override
+        public boolean isActiveProfileOwner(int uid) {
+            synchronized (getLockObject()) {
+                return getActiveAdminWithPolicyForUidLocked(
+                        null, DeviceAdminInfo.USES_POLICY_PROFILE_OWNER, uid) != null;
             }
         }
 
@@ -13920,7 +13953,7 @@ public class DevicePolicyManagerService extends BaseIDevicePolicyManager {
     @Override
     public void markProfileOwnerOnOrganizationOwnedDevice(ComponentName who, int userId) {
         // As the caller is the system, it must specify the component name of the profile owner
-        // as a sanity / safety check.
+        // as a safety check.
         Objects.requireNonNull(who);
 
         if (!mHasFeature) {
@@ -13956,7 +13989,7 @@ public class DevicePolicyManagerService extends BaseIDevicePolicyManager {
     @GuardedBy("getLockObject()")
     private void markProfileOwnerOnOrganizationOwnedDeviceUncheckedLocked(
             ComponentName who, int userId) {
-        // Sanity check: Make sure that the user has a profile owner and that the specified
+        // Make sure that the user has a profile owner and that the specified
         // component is the profile owner of that user.
         if (!isProfileOwner(who, userId)) {
             throw new IllegalArgumentException(String.format(
@@ -15557,12 +15590,12 @@ public class DevicePolicyManagerService extends BaseIDevicePolicyManager {
         return context.getResources().getString(R.string.config_managed_provisioning_package);
     }
 
-    private void putPrivateDnsSettings(@Nullable String mode, @Nullable String host) {
+    private void putPrivateDnsSettings(int mode, @Nullable String host) {
         // Set Private DNS settings using system permissions, as apps cannot write
         // to global settings.
         mInjector.binderWithCleanCallingIdentity(() -> {
-            mInjector.settingsGlobalPutString(PRIVATE_DNS_MODE, mode);
-            mInjector.settingsGlobalPutString(PRIVATE_DNS_SPECIFIER, host);
+            ConnectivitySettingsManager.setPrivateDnsMode(mContext, mode);
+            ConnectivitySettingsManager.setPrivateDnsHostname(mContext, host);
         });
     }
 
@@ -15583,11 +15616,12 @@ public class DevicePolicyManagerService extends BaseIDevicePolicyManager {
                     throw new IllegalArgumentException(
                             "Host provided for opportunistic mode, but is not needed.");
                 }
-                putPrivateDnsSettings(ConnectivityManager.PRIVATE_DNS_MODE_OPPORTUNISTIC, null);
+                putPrivateDnsSettings(ConnectivitySettingsManager.PRIVATE_DNS_MODE_OPPORTUNISTIC,
+                        null);
                 return PRIVATE_DNS_SET_NO_ERROR;
             case PRIVATE_DNS_MODE_PROVIDER_HOSTNAME:
                 if (TextUtils.isEmpty(privateDnsHost)
-                        || !NetworkUtils.isWeaklyValidatedHostname(privateDnsHost)) {
+                        || !NetworkUtilsInternal.isWeaklyValidatedHostname(privateDnsHost)) {
                     throw new IllegalArgumentException(
                             String.format("Provided hostname %s is not valid", privateDnsHost));
                 }
@@ -15595,7 +15629,7 @@ public class DevicePolicyManagerService extends BaseIDevicePolicyManager {
                 // Connectivity check will have been performed in the DevicePolicyManager before
                 // the call here.
                 putPrivateDnsSettings(
-                        ConnectivityManager.PRIVATE_DNS_MODE_PROVIDER_HOSTNAME,
+                        ConnectivitySettingsManager.PRIVATE_DNS_MODE_PROVIDER_HOSTNAME,
                         privateDnsHost);
                 return PRIVATE_DNS_SET_NO_ERROR;
             default:
@@ -15612,16 +15646,13 @@ public class DevicePolicyManagerService extends BaseIDevicePolicyManager {
 
         Objects.requireNonNull(who, "ComponentName is null");
         enforceDeviceOwner(who);
-        String currentMode = mInjector.settingsGlobalGetString(PRIVATE_DNS_MODE);
-        if (currentMode == null) {
-            currentMode = ConnectivityManager.PRIVATE_DNS_DEFAULT_MODE_FALLBACK;
-        }
+        final int currentMode = ConnectivitySettingsManager.getPrivateDnsMode(mContext);
         switch (currentMode) {
-            case ConnectivityManager.PRIVATE_DNS_MODE_OFF:
+            case ConnectivitySettingsManager.PRIVATE_DNS_MODE_OFF:
                 return PRIVATE_DNS_MODE_OFF;
-            case ConnectivityManager.PRIVATE_DNS_MODE_OPPORTUNISTIC:
+            case ConnectivitySettingsManager.PRIVATE_DNS_MODE_OPPORTUNISTIC:
                 return PRIVATE_DNS_MODE_OPPORTUNISTIC;
-            case ConnectivityManager.PRIVATE_DNS_MODE_PROVIDER_HOSTNAME:
+            case ConnectivitySettingsManager.PRIVATE_DNS_MODE_PROVIDER_HOSTNAME:
                 return PRIVATE_DNS_MODE_PROVIDER_HOSTNAME;
         }
 

@@ -23,6 +23,7 @@ import android.annotation.RequiresPermission;
 import android.annotation.SuppressLint;
 import android.annotation.SystemApi;
 import android.compat.annotation.UnsupportedAppUsage;
+import android.os.Build;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -185,6 +186,7 @@ public interface BluetoothProfile {
      *
      * @hide
      */
+    @SystemApi
     int MAP_CLIENT = 18;
 
     /**
@@ -206,6 +208,7 @@ public interface BluetoothProfile {
     int HEARING_AID = 21;
 
     /**
+<<<<<<< HEAD
      * BC_PROFILE
      * @hide
      */
@@ -228,6 +231,20 @@ public interface BluetoothProfile {
      * @hide
      */
     public static final int BROADCAST = 27;
+=======
+     * LE Audio Device
+     *
+     */
+    int LE_AUDIO = 22;
+
+    /**
+     * Volume Control profile
+     *
+     * @hide
+     */
+    @SystemApi
+    int VOLUME_CONTROL = 23;
+>>>>>>> 1a7b0835ced351de3f8f73b29a3b40996d335e65
 
     /**
      * Max profile ID. This value should be updated whenever a new profile is added to match
@@ -235,7 +252,11 @@ public interface BluetoothProfile {
      *
      * @hide
      */
+<<<<<<< HEAD
     int MAX_PROFILE_ID = 27;
+=======
+    int MAX_PROFILE_ID = 23;
+>>>>>>> 1a7b0835ced351de3f8f73b29a3b40996d335e65
 
     /**
      * Default priority for devices that we try to auto-connect to and
@@ -243,7 +264,7 @@ public interface BluetoothProfile {
      *
      * @hide
      **/
-    @UnsupportedAppUsage
+    @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
     int PRIORITY_AUTO_CONNECT = 1000;
 
     /**

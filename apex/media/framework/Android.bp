@@ -12,6 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+package {
+    // See: http://go/android-license-faq
+    // A large-scale-change added 'default_applicable_licenses' to import
+    // all of the 'license_kinds' from "frameworks_base_license"
+    // to get the below license kinds:
+    //   SPDX-license-identifier-Apache-2.0
+    default_applicable_licenses: ["frameworks_base_license"],
+}
+
 java_library {
     name: "updatable-media",
 
@@ -32,9 +41,7 @@ java_library {
     installable: true,
 
     sdk_version: "module_current",
-    libs: [
-        "framework_media_annotation",
-    ],
+    libs: ["framework-annotations-lib"],
     static_libs: [
         "exoplayer2-extractor"
     ],
@@ -43,12 +50,15 @@ java_library {
     plugins: ["java_api_finder"],
 
     hostdex: true, // for hiddenapi check
-    visibility: ["//frameworks/av/apex:__subpackages__"],
     apex_available: [
         "com.android.media",
         "test_com.android.media",
     ],
     min_sdk_version: "29",
+    visibility: [
+        "//frameworks/av/apex:__subpackages__",
+        "//frameworks/base", // For framework-all
+    ],
 }
 
 filegroup {
@@ -58,6 +68,7 @@ filegroup {
         ":mediasession2-java-srcs",
         ":mediasession2-aidl-srcs",
     ],
+    visibility: ["//frameworks/base"],
 }
 
 filegroup {
@@ -82,7 +93,7 @@ filegroup {
         "java/android/media/MediaParser.java"
     ],
     path: "java",
-}	
+}
 
 java_sdk_library {
     name: "framework-media",
@@ -94,26 +105,7 @@ java_sdk_library {
     srcs: [
         ":updatable-media-srcs",
     ],
-
-    libs: [
-        "framework_media_annotation",
-    ],
-
-    // Allow access to the stubs from anywhere.
-    visibility: ["//visibility:public"],
-
-    // Restrict access to implementation library.
-    impl_library_visibility: [
-       "//visibility:override", // Ignore the visibility property.
-       "//frameworks/av/apex:__subpackages__",
-    ],
-}
-
-java_library {
-    name: "framework_media_annotation",
-    srcs: [":framework-media-annotation-srcs"],
-    installable: false,
-    sdk_version: "core_current",
+    impl_library_visibility: ["//frameworks/av/apex:__subpackages__"],
 }
 
 cc_library_shared {
@@ -121,6 +113,7 @@ cc_library_shared {
     srcs: [
         "jni/android_media_MediaParserJNI.cpp",
     ],
+    header_libs: ["jni_headers"],
     shared_libs: [
         "libandroid",
         "liblog",

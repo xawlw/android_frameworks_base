@@ -30,7 +30,9 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.res.TypedArray;
 import android.database.ContentObserver;
+import android.icu.text.DateTimePatternGenerator;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Handler;
 import android.os.SystemClock;
 import android.os.UserHandle;
@@ -42,8 +44,6 @@ import android.view.ViewHierarchyEncoder;
 import android.view.inspector.InspectableProperty;
 
 import com.android.internal.R;
-
-import libcore.icu.LocaleData;
 
 import java.util.Calendar;
 import java.util.TimeZone;
@@ -262,14 +262,11 @@ public class TextClock extends TextView {
     }
 
     private void init() {
-        if (mFormat12 == null || mFormat24 == null) {
-            LocaleData ld = LocaleData.get(getContext().getResources().getConfiguration().locale);
-            if (mFormat12 == null) {
-                mFormat12 = ld.timeFormat_hm;
-            }
-            if (mFormat24 == null) {
-                mFormat24 = ld.timeFormat_Hm;
-            }
+        if (mFormat12 == null) {
+            mFormat12 = getBestDateTimePattern("hm");
+        }
+        if (mFormat24 == null) {
+            mFormat24 = getBestDateTimePattern("Hm");
         }
 
         createTime(mTimeZone);
@@ -498,7 +495,7 @@ public class TextClock extends TextView {
      *
      * @hide
      */
-    @UnsupportedAppUsage
+    @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
     public CharSequence getFormat() {
         return mFormat;
     }
@@ -510,13 +507,11 @@ public class TextClock extends TextView {
     private void chooseFormat() {
         final boolean format24Requested = is24HourModeEnabled();
 
-        LocaleData ld = LocaleData.get(getContext().getResources().getConfiguration().locale);
-
         if (format24Requested) {
-            mFormat = abc(mFormat24, mFormat12, ld.timeFormat_Hm);
+            mFormat = abc(mFormat24, mFormat12, getBestDateTimePattern("Hm"));
             mDescFormat = abc(mDescFormat24, mDescFormat12, mFormat);
         } else {
-            mFormat = abc(mFormat12, mFormat24, ld.timeFormat_hm);
+            mFormat = abc(mFormat12, mFormat24, getBestDateTimePattern("hm"));
             mDescFormat = abc(mDescFormat12, mDescFormat24, mFormat);
         }
 
@@ -527,6 +522,12 @@ public class TextClock extends TextView {
             if (hadSeconds) getHandler().removeCallbacks(mTicker);
             else mTicker.run();
         }
+    }
+
+    private String getBestDateTimePattern(String skeleton) {
+        DateTimePatternGenerator dtpg = DateTimePatternGenerator.getInstance(
+                getContext().getResources().getConfiguration().locale);
+        return dtpg.getBestPattern(skeleton);
     }
 
     /**

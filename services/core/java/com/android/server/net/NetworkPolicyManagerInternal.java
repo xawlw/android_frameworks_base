@@ -16,9 +16,12 @@
 
 package com.android.server.net;
 
+<<<<<<< HEAD
 import static com.android.server.net.NetworkPolicyManagerService.isNetworkingIsolatedByUidRulesInternal;
 import static com.android.server.net.NetworkPolicyManagerService.isUidNetworkingBlockedInternal;
 
+=======
+>>>>>>> 1a7b0835ced351de3f8f73b29a3b40996d335e65
 import android.annotation.NonNull;
 import android.net.Network;
 import android.net.NetworkTemplate;
@@ -40,6 +43,7 @@ public abstract class NetworkPolicyManagerInternal {
     public abstract void resetUserState(int userId);
 
     /**
+<<<<<<< HEAD
      * @return true if the given uid is restricted from doing networking on metered networks.
      */
     public abstract boolean isUidRestrictedOnMeteredNetworks(int uid);
@@ -81,10 +85,13 @@ public abstract class NetworkPolicyManagerInternal {
 
     /**
      * Informs that an appId has been added or removed from the temp-powersave-whitelist so that
+=======
+     * Informs that an appId has been added or removed from the temp-powersave-allowlist so that
+>>>>>>> 1a7b0835ced351de3f8f73b29a3b40996d335e65
      * that network rules for that appId can be updated.
      *
-     * @param appId The appId which has been updated in the whitelist.
-     * @param added Denotes whether the {@param appId} has been added or removed from the whitelist.
+     * @param appId The appId which has been updated in the allowlist.
+     * @param added Denotes whether the {@param appId} has been added or removed from the allowlist.
      */
     public abstract void onTempPowerSaveWhitelistChange(int appId, boolean added);
 
@@ -115,7 +122,7 @@ public abstract class NetworkPolicyManagerInternal {
     public abstract void onAdminDataAvailable();
 
     /**
-     * Control if a UID should be whitelisted even if it's in app idle mode. Other restrictions may
+     * Control if a UID should be allowlisted even if it's in app idle mode. Other restrictions may
      * still be in effect.
      */
     public abstract void setAppIdleWhitelist(int uid, boolean shouldWhitelist);
@@ -139,9 +146,10 @@ public abstract class NetworkPolicyManagerInternal {
 
     /**
      *  Notifies that the specified {@link NetworkStatsProvider} has reached its quota
-     *  which was set through {@link NetworkStatsProvider#onSetLimit(String, long)}.
+     *  which was set through {@link NetworkStatsProvider#onSetLimit(String, long)} or
+     *  {@link NetworkStatsProvider#onSetWarningAndLimit(String, long, long)}.
      *
      * @param tag the human readable identifier of the custom network stats provider.
      */
-    public abstract void onStatsProviderLimitReached(@NonNull String tag);
+    public abstract void onStatsProviderWarningOrLimitReached(@NonNull String tag);
 }

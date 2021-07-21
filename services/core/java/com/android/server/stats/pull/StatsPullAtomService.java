@@ -2382,7 +2382,7 @@ public class StatsPullAtomService extends SystemService {
             JSONArray app_sizes = json.getJSONArray(DiskStatsFileLogger.APP_SIZES_KEY);
             JSONArray app_data_sizes = json.getJSONArray(DiskStatsFileLogger.APP_DATA_KEY);
             JSONArray app_cache_sizes = json.getJSONArray(DiskStatsFileLogger.APP_CACHES_KEY);
-            // Sanity check: Ensure all 4 lists have the same length.
+            // Validity check: Ensure all 4 lists have the same length.
             int length = pkg_names.length();
             if (app_sizes.length() != length || app_data_sizes.length() != length
                     || app_cache_sizes.length() != length) {
@@ -3938,13 +3938,15 @@ public class StatsPullAtomService extends SystemService {
             ConnectivityManager.NetworkCallback {
         @Override
         public void onAvailable(Network network) {
-            FrameworkStatsLog.write(FrameworkStatsLog.CONNECTIVITY_STATE_CHANGED, network.netId,
+            FrameworkStatsLog.write(FrameworkStatsLog.CONNECTIVITY_STATE_CHANGED,
+                    network.getNetId(),
                     FrameworkStatsLog.CONNECTIVITY_STATE_CHANGED__STATE__CONNECTED);
         }
 
         @Override
         public void onLost(Network network) {
-            FrameworkStatsLog.write(FrameworkStatsLog.CONNECTIVITY_STATE_CHANGED, network.netId,
+            FrameworkStatsLog.write(FrameworkStatsLog.CONNECTIVITY_STATE_CHANGED,
+                    network.getNetId(),
                     FrameworkStatsLog.CONNECTIVITY_STATE_CHANGED__STATE__DISCONNECTED);
         }
     }

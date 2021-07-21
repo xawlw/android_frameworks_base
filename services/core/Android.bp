@@ -1,3 +1,19 @@
+package {
+    // See: http://go/android-license-faq
+    // A large-scale-change added 'default_applicable_licenses' to import
+    // all of the 'license_kinds' from "frameworks_base_license"
+    // to get the below license kinds:
+    //   SPDX-license-identifier-Apache-2.0
+    default_applicable_licenses: ["frameworks_base_license"],
+}
+
+filegroup {
+    name: "services.core-sources-deviceconfig-interface",
+    srcs: [
+         "java/com/android/server/utils/DeviceConfigInterface.java"
+    ],
+}
+
 filegroup {
     name: "services.core-sources",
     srcs: ["java/**/*.java"],
@@ -71,9 +87,18 @@ genrule {
     out: ["services.core.protolog.json"],
 }
 
+genrule {
+    name: "statslog-art-java-gen",
+    tools: ["stats-log-api-gen"],
+    cmd: "$(location stats-log-api-gen) --java $(out) --module art" +
+         " --javaPackage com.android.internal.art --javaClass ArtStatsLog --worksource",
+    out: ["com/android/internal/art/ArtStatsLog.java"],
+}
+
 java_library_static {
     name: "services.core.unboosted",
     srcs: [
+        ":statslog-art-java-gen",
         ":services.core.protologsrc",
         ":dumpstate_aidl",
         ":framework_native_aidl",
@@ -83,6 +108,7 @@ java_library_static {
         ":storaged_aidl",
         ":vold_aidl",
         ":platform-compat-config",
+        ":platform-compat-overrides",
         ":display-device-config",
         "java/com/android/server/EventLogTags.logtags",
         "java/com/android/server/am/EventLogTags.logtags",
@@ -93,10 +119,9 @@ java_library_static {
     libs: [
         "services.net",
         "android.hardware.light-V2.0-java",
-        "android.hardware.power-java",
+        "android.hardware.power-V1-java",
         "android.hardware.power-V1.0-java",
-        "android.hardware.vibrator-java",
-        "android.net.ipsec.ike.stubs.module_lib",
+        "android.hardware.vibrator-V1-java",
         "app-compat-annotations",
         "framework-tethering.stubs.module_lib",
         "service-permission.stubs.system_server",
@@ -111,11 +136,14 @@ java_library_static {
         "time_zone_distro",
         "time_zone_distro_installer",
         "android.hardware.authsecret-V1.0-java",
+        "android.hardware.boot-V1.0-java",
+        "android.hardware.boot-V1.1-java",
+        "android.hardware.boot-V1.2-java",
         "android.hardware.broadcastradio-V2.0-java",
         "android.hardware.health-V1.0-java",
         "android.hardware.health-V2.0-java",
         "android.hardware.health-V2.1-java",
-        "android.hardware.light-java",
+        "android.hardware.light-V1-java",
         "android.hardware.tv.cec-V1.0-java",
         "android.hardware.weaver-V1.0-java",
         "android.hardware.biometrics.face-V1.0-java",
@@ -123,10 +151,11 @@ java_library_static {
         "android.hardware.oemlock-V1.0-java",
         "android.hardware.configstore-V1.0-java",
         "android.hardware.contexthub-V1.0-java",
-        "android.hardware.rebootescrow-java",
+        "android.hardware.rebootescrow-V1-java",
         "android.hardware.soundtrigger-V2.3-java",
         "android.hidl.manager-V1.2-java",
         "capture_state_listener-aidl-java",
+<<<<<<< HEAD
         "dnsresolver_aidl_interface-java",
         "motorola.hardware.health-V1.0-java",
         "netd_aidl_interfaces-platform-java",
@@ -134,6 +163,13 @@ java_library_static {
         "SurfaceFlingerProperties",
         "vendor.lineage.biometrics.fingerprint.inscreen-V1.0-java",
         "faceunlock_framework",
+=======
+        "icu4j_calendar_astronomer",
+        "netd-client",
+        "overlayable_policy_aidl-java",
+        "SurfaceFlingerProperties",
+        "com.android.sysprop.watchdog",
+>>>>>>> 1a7b0835ced351de3f8f73b29a3b40996d335e65
     ],
 }
 
@@ -178,3 +214,4 @@ prebuilt_etc {
     name: "protolog.conf.json.gz",
     src: ":services.core.json.gz",
 }
+

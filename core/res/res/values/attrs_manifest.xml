@@ -271,7 +271,7 @@
         <flag name="runtime" value="0x2000" />
         <!-- Additional flag from base permission type: this permission can be granted only
              if its protection level is signature, the requesting app resides on the OEM partition,
-             and the OEM has white-listed the app to receive this permission by the OEM.
+             and the OEM has allowlisted the app to receive this permission by the OEM.
          -->
         <flag name="oem" value="0x4000" />
         <!-- Additional flag from base permission type: this permission can be granted to
@@ -338,7 +338,7 @@
         <flag name="softRestricted" value="0x8" />
         <!-- This permission is restricted immutably which means that its
              restriction state may be specified only on the first install of
-             the app and will stay in this initial whitelist state until
+             the app and will stay in this initial allowlist state until
              the app is uninstalled.
         -->
         <flag name="immutablyRestricted" value="0x10" />
@@ -1407,13 +1407,13 @@
     <attr name="lockTaskMode">
         <!-- This is the default value. Tasks will not launch into lockTask mode but can be
              placed there by calling {@link android.app.Activity#startLockTask}. If a task with
-             this mode has been whitelisted using {@link
+             this mode has been allowlisted using {@link
              android.app.admin.DevicePolicyManager#setLockTaskPackages} then calling
              {@link android.app.Activity#startLockTask} will enter lockTask mode immediately,
              otherwise the user will be presented with a dialog to approve entering pinned mode.
              <p>If the system is already in lockTask mode when a new task rooted at this activity
              is launched that task will or will not start depending on whether the package of this
-             activity has been whitelisted.
+             activity has been allowlisted.
              <p>Tasks rooted at this activity can only exit lockTask mode using
              {@link android.app.Activity#stopLockTask}. -->
         <enum name="normal" value="0"/>
@@ -1558,6 +1558,27 @@
         <enum name="never" value="0" />
         <!-- Always enable GwpAsan. -->
        <enum name="always" value="1" />
+    </attr>
+
+    <!-- Enable hardware memory tagging (ARM MTE) in this process.
+         When enabled, heap memory bugs like use-after-free and buffer overlow
+         are detected and result in an immediate ("sync" mode) or delayed ("async"
+         mode) crash instead of a silent memory corruption. Sync mode, while slower,
+         provides enhanced bug reports including stack traces at the time of allocation
+         and deallocation of memory, similar to AddressSanitizer.
+
+         See the <a href="https://community.arm.com/developer/ip-products/processors/b/processors-ip-blog/posts/enhancing-memory-safety">ARM announcement</a>
+         for more details.
+
+         <p>This attribute can be applied to a
+         {@link android.R.styleable#AndroidManifestProcess process} tag, or to an
+         {@link android.R.styleable#AndroidManifestApplication application} tag (to supply
+         a default setting for all application components). -->
+    <attr name="memtagMode">
+       <enum name="default" value="-1" />
+       <enum name="off" value="0" />
+       <enum name="async" value="1" />
+       <enum name="sync" value="2" />
     </attr>
 
     <!-- The <code>manifest</code> tag is the root of an
@@ -1826,6 +1847,12 @@
         <attr name="allowNativeHeapPointerTagging" format="boolean" />
 
         <attr name="gwpAsanMode" />
+
+        <attr name="memtagMode" />
+
+        <!-- If {@code true} enables automatic zero initialization of all native heap
+             allocations. -->
+        <attr name="nativeHeapZeroInitialized" format="boolean" />
 
         <!-- @hide no longer used, kept to preserve padding -->
         <attr name="allowAutoRevokePermissionsExemption" format="boolean" />
@@ -2350,6 +2377,8 @@
         <!-- Required name of the process that is allowed -->
         <attr name="process" />
         <attr name="gwpAsanMode" />
+        <attr name="memtagMode" />
+        <attr name="nativeHeapZeroInitialized" />
     </declare-styleable>
 
     <!-- The <code>deny-permission</code> tag specifies that a permission is to be denied

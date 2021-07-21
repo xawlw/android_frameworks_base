@@ -16,12 +16,12 @@
 
 package com.android.server.job.controllers;
 
-import static android.net.NetworkCapabilities.LINK_BANDWIDTH_UNSPECIFIED;
 import static android.net.NetworkCapabilities.NET_CAPABILITY_NOT_CONGESTED;
 import static android.net.NetworkCapabilities.NET_CAPABILITY_NOT_METERED;
 
 import static com.android.server.job.JobSchedulerService.RESTRICTED_INDEX;
 
+import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.app.job.JobInfo;
 import android.net.ConnectivityManager;
@@ -54,6 +54,7 @@ import com.android.server.job.JobSchedulerService.Constants;
 import com.android.server.job.StateControllerProto;
 import com.android.server.net.NetworkPolicyManagerInternal;
 
+import java.lang.reflect.InvocationTargetException;
 import java.util.Objects;
 import java.util.function.Predicate;
 
@@ -328,7 +329,7 @@ public final class ConnectivityController extends RestrictingController implemen
         if (downloadBytes != JobInfo.NETWORK_BYTES_UNKNOWN) {
             final long bandwidth = capabilities.getLinkDownstreamBandwidthKbps();
             // If we don't know the bandwidth, all we can do is hope the job finishes in time.
-            if (bandwidth != LINK_BANDWIDTH_UNSPECIFIED) {
+            if (bandwidth > 0) {
                 // Divide by 8 to convert bits to bytes.
                 final long estimatedMillis = ((downloadBytes * DateUtils.SECOND_IN_MILLIS)
                         / (DataUnit.KIBIBYTES.toBytes(bandwidth) / 8));
@@ -346,7 +347,7 @@ public final class ConnectivityController extends RestrictingController implemen
         if (uploadBytes != JobInfo.NETWORK_BYTES_UNKNOWN) {
             final long bandwidth = capabilities.getLinkUpstreamBandwidthKbps();
             // If we don't know the bandwidth, all we can do is hope the job finishes in time.
-            if (bandwidth != LINK_BANDWIDTH_UNSPECIFIED) {
+            if (bandwidth > 0) {
                 // Divide by 8 to convert bits to bytes.
                 final long estimatedMillis = ((uploadBytes * DateUtils.SECOND_IN_MILLIS)
                         / (DataUnit.KIBIBYTES.toBytes(bandwidth) / 8));
@@ -374,20 +375,26 @@ public final class ConnectivityController extends RestrictingController implemen
         }
     }
 
+    private static NetworkCapabilities.Builder copyCapabilities(
+            @NonNull final NetworkRequest request) {
+        final NetworkCapabilities.Builder builder = new NetworkCapabilities.Builder();
+        for (int transport : request.getTransportTypes()) builder.addTransportType(transport);
+        for (int capability : request.getCapabilities()) builder.addCapability(capability);
+        return builder;
+    }
+
     private static boolean isStrictSatisfied(JobStatus jobStatus, Network network,
             NetworkCapabilities capabilities, Constants constants) {
-        final NetworkCapabilities required;
         // A restricted job that's out of quota MUST use an unmetered network.
         if (jobStatus.getEffectiveStandbyBucket() == RESTRICTED_INDEX
                 && !jobStatus.isConstraintSatisfied(JobStatus.CONSTRAINT_WITHIN_QUOTA)) {
-            required = new NetworkCapabilities(
-                    jobStatus.getJob().getRequiredNetwork().networkCapabilities)
-                    .addCapability(NET_CAPABILITY_NOT_METERED);
+            final NetworkCapabilities.Builder builder =
+                    copyCapabilities(jobStatus.getJob().getRequiredNetwork());
+            builder.addCapability(NET_CAPABILITY_NOT_METERED);
+            return builder.build().satisfiedByNetworkCapabilities(capabilities);
         } else {
-            required = jobStatus.getJob().getRequiredNetwork().networkCapabilities;
+            return jobStatus.getJob().getRequiredNetwork().canBeSatisfiedBy(capabilities);
         }
-
-        return required.satisfiedByNetworkCapabilities(capabilities);
     }
 
     private static boolean isRelaxedSatisfied(JobStatus jobStatus, Network network,
@@ -398,10 +405,10 @@ public final class ConnectivityController extends RestrictingController implemen
         }
 
         // See if we match after relaxing any unmetered request
-        final NetworkCapabilities relaxed = new NetworkCapabilities(
-                jobStatus.getJob().getRequiredNetwork().networkCapabilities)
-                        .removeCapability(NET_CAPABILITY_NOT_METERED);
-        if (relaxed.satisfiedByNetworkCapabilities(capabilities)) {
+        final NetworkCapabilities.Builder builder =
+                copyCapabilities(jobStatus.getJob().getRequiredNetwork());
+        builder.removeCapability(NET_CAPABILITY_NOT_METERED);
+        if (builder.build().satisfiedByNetworkCapabilities(capabilities)) {
             // TODO: treat this as "maybe" response; need to check quotas
             return jobStatus.getFractionRunTime() > constants.CONN_PREFETCH_RELAX_FRAC;
         } else {
@@ -454,8 +461,19 @@ public final class ConnectivityController extends RestrictingController implemen
         }
     }
 
-    private boolean updateConstraintsSatisfied(JobStatus jobStatus) {
-        final Network network = mConnManager.getActiveNetworkForUid(jobStatus.getSourceUid());
+    private Network getActiveNetworkForUid(int uid)  {
+        try {
+            return (Network) mConnManager.getClass()
+                    .getMethod("getActiveNetworkForUid", int.class)
+                    .invoke(mConnManager, uid);
+        } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {
+            throw new IllegalStateException(
+                    "Unable to call getActiveNetworkForUid: ", e);
+        }
+    }
+
+    private boolean updateConstraintsSatisfied(JobStatus jobStatus)  {
+        final Network network = getActiveNetworkForUid(jobStatus.getSourceUid());
         final NetworkCapabilities capabilities = getNetworkCapabilities(network);
         return updateConstraintsSatisfied(jobStatus, network, capabilities);
     }
@@ -516,7 +534,7 @@ public final class ConnectivityController extends RestrictingController implemen
             return false;
         }
 
-        final Network network = mConnManager.getActiveNetworkForUid(jobs.valueAt(0).getSourceUid());
+        final Network network = getActiveNetworkForUid(jobs.valueAt(0).getSourceUid());
         final NetworkCapabilities capabilities = getNetworkCapabilities(network);
         final boolean networkMatch = (filterNetwork == null
                 || Objects.equals(filterNetwork, network));
@@ -687,13 +705,6 @@ public final class ConnectivityController extends RestrictingController implemen
                     StateControllerProto.ConnectivityController.REQUESTED_STANDBY_EXCEPTION_UIDS,
                     mRequestedWhitelistJobs.keyAt(i));
         }
-        for (int i = 0; i < mAvailableNetworks.size(); i++) {
-            Network network = mAvailableNetworks.keyAt(i);
-            if (network != null) {
-                network.dumpDebug(proto,
-                        StateControllerProto.ConnectivityController.AVAILABLE_NETWORKS);
-            }
-        }
         for (int i = 0; i < mTrackedJobs.size(); i++) {
             final ArraySet<JobStatus> jobs = mTrackedJobs.valueAt(i);
             for (int j = 0; j < jobs.size(); j++) {
@@ -707,12 +718,6 @@ public final class ConnectivityController extends RestrictingController implemen
                         StateControllerProto.ConnectivityController.TrackedJob.INFO);
                 proto.write(StateControllerProto.ConnectivityController.TrackedJob.SOURCE_UID,
                         js.getSourceUid());
-                NetworkRequest rn = js.getJob().getRequiredNetwork();
-                if (rn != null) {
-                    rn.dumpDebug(proto,
-                            StateControllerProto.ConnectivityController.TrackedJob
-                                    .REQUIRED_NETWORK);
-                }
                 proto.end(jsToken);
             }
         }

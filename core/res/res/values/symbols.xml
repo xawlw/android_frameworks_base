@@ -302,6 +302,7 @@
   <java-symbol type="string" name="config_wlan_network_service_package" />
   <java-symbol type="string" name="config_wwan_network_service_class" />
   <java-symbol type="string" name="config_wlan_network_service_class" />
+  <java-symbol type="bool" name="config_wlan_data_service_conn_persistence_on_restart" />
   <java-symbol type="string" name="config_wwan_data_service_package" />
   <java-symbol type="string" name="config_wlan_data_service_package" />
   <java-symbol type="string" name="config_wwan_data_service_class" />
@@ -311,6 +312,7 @@
   <java-symbol type="bool" name="config_networkSamplingWakesDevice" />
   <java-symbol type="bool" name="config_showMenuShortcutsWhenKeyboardPresent" />
   <java-symbol type="bool" name="config_sip_wifi_only" />
+  <java-symbol type="bool" name="config_sms_ask_every_time_support" />
   <java-symbol type="bool" name="config_sms_capable" />
   <java-symbol type="bool" name="config_sms_utf8_support" />
   <java-symbol type="bool" name="config_mobile_data_capable" />
@@ -682,7 +684,7 @@
   <java-symbol type="string" name="config_ethernet_iface_regex" />
   <java-symbol type="string" name="not_checked" />
   <java-symbol type="array" name="config_ethernet_interfaces" />
-  <java-symbol type="array" name="config_wakeonlan_supported_interfaces" />
+  <java-symbol type="bool" name="config_vehicleInternalNetworkAlwaysRequested" />
   <java-symbol type="string" name="config_forceVoiceInteractionServicePackage" />
   <java-symbol type="string" name="config_mms_user_agent" />
   <java-symbol type="string" name="config_mms_user_agent_profile_url" />
@@ -1143,6 +1145,17 @@
   <java-symbol type="string" name="mediasize_na_monarch" />
   <java-symbol type="string" name="mediasize_na_quarto" />
   <java-symbol type="string" name="mediasize_na_foolscap" />
+  <java-symbol type="string" name="mediasize_na_ansi_c" />
+  <java-symbol type="string" name="mediasize_na_ansi_d" />
+  <java-symbol type="string" name="mediasize_na_ansi_e" />
+  <java-symbol type="string" name="mediasize_na_ansi_f" />
+  <java-symbol type="string" name="mediasize_na_arch_a" />
+  <java-symbol type="string" name="mediasize_na_arch_b" />
+  <java-symbol type="string" name="mediasize_na_arch_c" />
+  <java-symbol type="string" name="mediasize_na_arch_d" />
+  <java-symbol type="string" name="mediasize_na_arch_e" />
+  <java-symbol type="string" name="mediasize_na_arch_e1" />
+  <java-symbol type="string" name="mediasize_na_super_b" />
   <java-symbol type="string" name="mediasize_chinese_roc_8k" />
   <java-symbol type="string" name="mediasize_chinese_roc_16k" />
   <java-symbol type="string" name="mediasize_chinese_prc_1" />
@@ -1179,6 +1192,7 @@
   <java-symbol type="string" name="mediasize_japanese_kahu" />
   <java-symbol type="string" name="mediasize_japanese_kaku2" />
   <java-symbol type="string" name="mediasize_japanese_you4" />
+  <java-symbol type="string" name="mediasize_japanese_l" />
   <java-symbol type="string" name="network_partial_connectivity" />
   <java-symbol type="string" name="network_partial_connectivity_detailed" />
   <java-symbol type="string" name="reason_service_unavailable" />
@@ -1855,7 +1869,7 @@
   <java-symbol type="array" name="config_tether_upstream_types" />
   <java-symbol type="array" name="config_tether_usb_regexs" />
   <java-symbol type="array" name="config_tether_wifi_regexs" />
-  <java-symbol type="array" name="config_usbHostBlacklist" />
+  <java-symbol type="array" name="config_usbHostDenylist" />
   <java-symbol type="array" name="config_serialPorts" />
   <java-symbol type="array" name="radioAttributes" />
   <java-symbol type="array" name="config_oemUsbModeOverride" />
@@ -1951,11 +1965,9 @@
   <java-symbol type="integer" name="config_lowBatteryCloseWarningBump" />
   <java-symbol type="integer" name="config_lowBatteryWarningLevel" />
   <java-symbol type="integer" name="config_networkPolicyDefaultWarning" />
-  <java-symbol type="integer" name="config_networkTransitionTimeout" />
   <java-symbol type="integer" name="config_networkNotifySwitchType" />
   <java-symbol type="array" name="config_networkNotifySwitches" />
   <java-symbol type="integer" name="config_networkAvoidBadWifi" />
-  <java-symbol type="string" name="config_networkCaptivePortalServerUrl" />
   <java-symbol type="integer" name="config_networkWakeupPacketMark" />
   <java-symbol type="integer" name="config_networkWakeupPacketMask" />
   <java-symbol type="bool" name="config_apfDrop802_3Frames" />
@@ -2162,6 +2174,7 @@
   <java-symbol type="string" name="config_defaultNetworkScorerPackageName" />
   <java-symbol type="string" name="config_persistentDataPackageName" />
   <java-symbol type="string" name="config_deviceConfiguratorPackageName" />
+  <java-symbol type="array" name="config_autoTimeSourcesPriority" />
 
   <java-symbol type="layout" name="resolver_list" />
   <java-symbol type="id" name="resolver_list" />
@@ -2611,6 +2624,7 @@
   <java-symbol type="bool" name="config_defaultWindowFeatureContextMenu" />
   <java-symbol type="bool" name="config_overrideRemoteViewsActivityTransition" />
   <java-symbol type="attr" name="colorProgressBackgroundNormal" />
+  <java-symbol type="bool" name="config_allow_pin_storage_for_unattended_reboot" />
 
   <java-symbol type="layout" name="simple_account_item" />
   <java-symbol type="string" name="prohibit_manual_network_selection_in_gobal_mode" />
@@ -3064,7 +3078,6 @@
   <java-symbol type="bool" name="config_pinnerCameraApp" />
   <java-symbol type="bool" name="config_pinnerHomeApp" />
   <java-symbol type="bool" name="config_pinnerAssistantApp" />
-  <java-symbol type="array" name="config_jitzygoteBootImagePinnerServiceFiles" />
 
   <java-symbol type="string" name="config_doubleTouchGestureEnableFile" />
 
@@ -3187,6 +3200,9 @@
 
   <!-- Network Recommendation -->
   <java-symbol type="string" name="config_defaultNetworkRecommendationProviderPackage" />
+
+  <!-- Optional IPsec algorithms -->
+  <java-symbol type="array" name="config_optionalIpSecAlgorithms" />
 
   <!-- Whether allow 3rd party apps on internal storage. -->
   <java-symbol type="bool" name="config_allow3rdPartyAppOnInternal" />
@@ -3367,6 +3383,7 @@
   <java-symbol type="dimen" name="notification_media_image_max_width_low_ram"/>
   <java-symbol type="dimen" name="notification_media_image_max_height_low_ram"/>
   <java-symbol type="dimen" name="notification_right_icon_size_low_ram"/>
+  <java-symbol type="dimen" name="notification_grayscale_icon_max_size"/>
   <java-symbol type="dimen" name="notification_custom_view_max_image_height_low_ram"/>
   <java-symbol type="dimen" name="notification_custom_view_max_image_width_low_ram"/>
 
@@ -3789,6 +3806,11 @@
   <java-symbol type="array" name="config_brightnessThresholdsOfPeakRefreshRate" />
   <java-symbol type="array" name="config_ambientThresholdsOfPeakRefreshRate" />
 
+  <!-- For fixed refresh rate displays in high brightness-->
+  <java-symbol type="integer" name="config_fixedRefreshRateInHighZone" />
+  <java-symbol type="array" name="config_highDisplayBrightnessThresholdsOfFixedRefreshRate" />
+  <java-symbol type="array" name="config_highAmbientBrightnessThresholdsOfFixedRefreshRate" />
+
   <!-- For Auto-Brightness -->
   <java-symbol type="string" name="config_displayLightSensorType" />
 
@@ -3830,7 +3852,6 @@
   <java-symbol type="color" name="decor_view_status_guard_light" />
 
   <java-symbol type="string" name="config_defaultSupervisionProfileOwnerComponent" />
-  <java-symbol type="bool" name="config_inflateSignalStrength" />
 
   <java-symbol type="drawable" name="android_logotype" />
   <java-symbol type="layout" name="platlogo_layout" />
@@ -3849,6 +3870,7 @@
   <java-symbol type="layout" name="chooser_action_button" />
   <java-symbol type="dimen" name="chooser_action_button_icon_size" />
   <java-symbol type="string" name="config_defaultNearbySharingComponent" />
+  <java-symbol type="bool" name="config_disable_all_cb_messages" />
   <java-symbol type="drawable" name="ic_close" />
 
   <java-symbol type="bool" name="config_automotiveHideNavBarForKeyboard" />
@@ -4056,4 +4078,6 @@
   <java-symbol type="array" name="config_notificationMsgPkgsAllowedAsConvos" />
 
   <java-symbol type="array" name="config_keep_warming_services" />
+
+  <java-symbol type="bool" name="config_voice_data_sms_auto_fallback" />
 </resources>

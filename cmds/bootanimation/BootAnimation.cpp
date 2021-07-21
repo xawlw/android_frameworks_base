@@ -92,6 +92,8 @@ static const char SYSTEM_TIME_DIR_NAME[] = "time";
 static const char SYSTEM_TIME_DIR_PATH[] = "/data/system/time";
 static const char CLOCK_FONT_ASSET[] = "images/clock_font.png";
 static const char CLOCK_FONT_ZIP_NAME[] = "clock_font.png";
+static const char PROGRESS_FONT_ASSET[] = "images/progress_font.png";
+static const char PROGRESS_FONT_ZIP_NAME[] = "progress_font.png";
 static const char LAST_TIME_CHANGED_FILE_NAME[] = "last_time_change";
 static const char LAST_TIME_CHANGED_FILE_PATH[] = "/data/system/time/last_time_change";
 static const char ACCURATE_TIME_FLAG_FILE_NAME[] = "time_is_accurate";
@@ -107,6 +109,7 @@ static constexpr size_t FONT_NUM_ROWS = FONT_NUM_CHARS / FONT_NUM_COLS;
 static const int TEXT_CENTER_VALUE = INT_MAX;
 static const int TEXT_MISSING_VALUE = INT_MIN;
 static const char EXIT_PROP_NAME[] = "service.bootanim.exit";
+static const char PROGRESS_PROP_NAME[] = "service.bootanim.progress";
 static const char DISPLAYS_PROP_NAME[] = "persist.service.bootanim.displays";
 static const int ANIM_ENTRY_NAME_MAX = ANIM_PATH_MAX + 1;
 static constexpr size_t TEXT_POS_LEN_MAX = 16;
@@ -582,6 +585,7 @@ bool BootAnimation::threadLoop() {
         result = movie();
     }
 
+    mCallbacks->shutdown();
     eglMakeCurrent(mDisplay, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
     eglDestroyContext(mDisplay, mContext);
     eglDestroySurface(mDisplay, mSurface);
@@ -668,7 +672,6 @@ void BootAnimation::checkExit() {
     int exitnow = atoi(value);
     if (exitnow) {
         requestExit();
-        mCallbacks->shutdown();
     }
 }
 
@@ -891,6 +894,18 @@ void BootAnimation::drawClock(const Font& font, const int xPos, const int yPos) 
     drawText(out, font, false, &x, &y);
 }
 
+void BootAnimation::drawProgress(int percent, const Font& font, const int xPos, const int yPos) {
+    static constexpr int PERCENT_LENGTH = 5;
+
+    char percentBuff[PERCENT_LENGTH];
+    // ';' has the ascii code just after ':', and the font resource contains '%'
+    // for that ascii code.
+    sprintf(percentBuff, "%d;", percent);
+    int x = xPos;
+    int y = yPos;
+    drawText(percentBuff, font, false, &x, &y);
+}
+
 bool BootAnimation::parseAnimationDesc(Animation& animation)  {
     String8 desString;
 
@@ -910,6 +925,10 @@ bool BootAnimation::parseAnimationDesc(Animation& animation)  {
         int height = 0;
         int count = 0;
         int pause = 0;
+<<<<<<< HEAD
+=======
+        int progress = 0;
+>>>>>>> 1a7b0835ced351de3f8f73b29a3b40996d335e65
         int framesToFadeCount = 0;
         char path[ANIM_ENTRY_NAME_MAX];
         char color[7] = "000000"; // default to black if unspecified
@@ -919,11 +938,25 @@ bool BootAnimation::parseAnimationDesc(Animation& animation)  {
 
         int nextReadPos;
 
+<<<<<<< HEAD
         if (sscanf(l, "%d %d %d", &width, &height, &fps) == 3) {
             // SLOGD("> w=%d, h=%d, fps=%d", width, height, fps);
             animation.width = width;
             animation.height = height;
             animation.fps = fps;
+=======
+        int topLineNumbers = sscanf(l, "%d %d %d %d", &width, &height, &fps, &progress);
+        if (topLineNumbers == 3 || topLineNumbers == 4) {
+            // SLOGD("> w=%d, h=%d, fps=%d, progress=%d", width, height, fps, progress);
+            animation.width = width;
+            animation.height = height;
+            animation.fps = fps;
+            if (topLineNumbers == 4) {
+              animation.progressEnabled = (progress != 0);
+            } else {
+              animation.progressEnabled = false;
+            }
+>>>>>>> 1a7b0835ced351de3f8f73b29a3b40996d335e65
         } else if (sscanf(l, "%c %d %d %" STRTO(ANIM_PATH_MAX) "s%n",
                           &pathType, &count, &pause, path, &nextReadPos) >= 4) {
             if (pathType == 'f') {
@@ -996,6 +1029,14 @@ bool BootAnimation::preloadZip(Animation& animation) {
                 FileMap* map = zip->createEntryFileMap(entry);
                 if (map) {
                     animation.clockFont.map = map;
+                }
+                continue;
+            }
+
+            if (entryName == PROGRESS_FONT_ZIP_NAME) {
+                FileMap* map = zip->createEntryFileMap(entry);
+                if (map) {
+                    animation.progressFont.map = map;
                 }
                 continue;
             }
@@ -1131,6 +1172,8 @@ bool BootAnimation::movie() {
         mClockEnabled = clockFontInitialized;
     }
 
+    initFont(&mAnimation->progressFont, PROGRESS_FONT_ASSET);
+
     if (mClockEnabled && !updateIsTimeAccurate()) {
         mTimeCheckThread = new TimeCheckThread(this);
         mTimeCheckThread->run("BootAnimation::TimeCheckThread", PRIORITY_NORMAL);
@@ -1153,9 +1196,18 @@ bool BootAnimation::movie() {
     return false;
 }
 
+<<<<<<< HEAD
 bool BootAnimation::shouldStopPlayingPart(const Animation::Part& part, const int fadedFramesCount) {
     // stop playing only if it is time to exit and it's a partial part which has been faded out
     return exitPending() && !part.playUntilComplete && fadedFramesCount >= part.framesToFadeCount;
+=======
+bool BootAnimation::shouldStopPlayingPart(const Animation::Part& part,
+                                          const int fadedFramesCount,
+                                          const int lastDisplayedProgress) {
+    // stop playing only if it is time to exit and it's a partial part which has been faded out
+    return exitPending() && !part.playUntilComplete && fadedFramesCount >= part.framesToFadeCount &&
+        (lastDisplayedProgress == 0 || lastDisplayedProgress == 100);
+>>>>>>> 1a7b0835ced351de3f8f73b29a3b40996d335e65
 }
 
 bool BootAnimation::playAnimation(const Animation& animation) {
@@ -1166,6 +1218,10 @@ bool BootAnimation::playAnimation(const Animation& animation) {
             elapsedRealtime());
 
     int fadedFramesCount = 0;
+<<<<<<< HEAD
+=======
+    int lastDisplayedProgress = 0;
+>>>>>>> 1a7b0835ced351de3f8f73b29a3b40996d335e65
     for (size_t i=0 ; i<pcount ; i++) {
         const Animation::Part& part(animation.parts[i]);
         const size_t fcount = part.frames.size();
@@ -1181,7 +1237,11 @@ bool BootAnimation::playAnimation(const Animation& animation) {
 
         // process the part not only while the count allows but also if already fading
         for (int r=0 ; !part.count || r<part.count || fadedFramesCount > 0 ; r++) {
+<<<<<<< HEAD
             if (shouldStopPlayingPart(part, fadedFramesCount)) break;
+=======
+            if (shouldStopPlayingPart(part, fadedFramesCount, lastDisplayedProgress)) break;
+>>>>>>> 1a7b0835ced351de3f8f73b29a3b40996d335e65
 
             mCallbacks->playPart(i, part, r);
 
@@ -1191,8 +1251,19 @@ bool BootAnimation::playAnimation(const Animation& animation) {
                     part.backgroundColor[2],
                     1.0f);
 
+<<<<<<< HEAD
             for (size_t j=0 ; j<fcount ; j++) {
                 if (shouldStopPlayingPart(part, fadedFramesCount)) break;
+=======
+            // For the last animation, if we have progress indicator from
+            // the system, display it.
+            int currentProgress = android::base::GetIntProperty(PROGRESS_PROP_NAME, 0);
+            bool displayProgress = animation.progressEnabled &&
+                (i == (pcount -1)) && currentProgress != 0;
+
+            for (size_t j=0 ; j<fcount ; j++) {
+                if (shouldStopPlayingPart(part, fadedFramesCount, lastDisplayedProgress)) break;
+>>>>>>> 1a7b0835ced351de3f8f73b29a3b40996d335e65
 
                 processDisplayEvents();
 
@@ -1248,6 +1319,26 @@ bool BootAnimation::playAnimation(const Animation& animation) {
                     drawClock(animation.clockFont, part.clockPosX, part.clockPosY);
                 }
 
+<<<<<<< HEAD
+=======
+                if (displayProgress) {
+                    int newProgress = android::base::GetIntProperty(PROGRESS_PROP_NAME, 0);
+                    // In case the new progress jumped suddenly, still show an
+                    // increment of 1.
+                    if (lastDisplayedProgress != 100) {
+                      // Artificially sleep 1/10th a second to slow down the animation.
+                      usleep(100000);
+                      if (lastDisplayedProgress < newProgress) {
+                        lastDisplayedProgress++;
+                      }
+                    }
+                    // Put the progress percentage right below the animation.
+                    int posY = animation.height / 3;
+                    int posX = TEXT_CENTER_VALUE;
+                    drawProgress(lastDisplayedProgress, animation.progressFont, posX, posY);
+                }
+
+>>>>>>> 1a7b0835ced351de3f8f73b29a3b40996d335e65
                 handleViewport(frameDuration);
 
                 eglSwapBuffers(mDisplay, mSurface);
@@ -1274,6 +1365,13 @@ bool BootAnimation::playAnimation(const Animation& animation) {
 
             if (exitPending() && !part.count && mCurrentInset >= mTargetInset &&
                 !part.hasFadingPhase()) {
+<<<<<<< HEAD
+=======
+                if (lastDisplayedProgress != 0 && lastDisplayedProgress != 100) {
+                    android::base::SetProperty(PROGRESS_PROP_NAME, "100");
+                    continue;
+                }
+>>>>>>> 1a7b0835ced351de3f8f73b29a3b40996d335e65
                 break; // exit the infinite non-fading part when it has been played at least once
             }
         }

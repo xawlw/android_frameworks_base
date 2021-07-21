@@ -53,7 +53,6 @@ import android.content.pm.PackageManager.NameNotFoundException;
 import android.content.pm.ParceledListSlice;
 import android.content.pm.UserInfo;
 import android.graphics.Bitmap;
-import android.net.NetworkUtils;
 import android.net.PrivateDnsConnectivityChecker;
 import android.net.ProxyInfo;
 import android.net.Uri;
@@ -86,10 +85,13 @@ import android.security.keystore.StrongBoxUnavailableException;
 import android.service.restrictions.RestrictionsReceiver;
 import android.telephony.TelephonyManager;
 import android.telephony.data.ApnSetting;
+import android.text.TextUtils;
 import android.util.ArraySet;
 import android.util.Log;
+import android.util.Pair;
 
 import com.android.internal.annotations.VisibleForTesting;
+import com.android.internal.net.NetworkUtilsInternal;
 import com.android.internal.os.BackgroundThread;
 import com.android.internal.util.Preconditions;
 import com.android.org.conscrypt.TrustedCertificateStore;
@@ -1396,7 +1398,7 @@ public class DevicePolicyManager {
      * sent to the parent user.
      * @hide
      */
-    @UnsupportedAppUsage
+    @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
     public static final String ACTION_DEVICE_POLICY_MANAGER_STATE_CHANGED
             = "android.app.action.DEVICE_POLICY_MANAGER_STATE_CHANGED";
 
@@ -1465,7 +1467,7 @@ public class DevicePolicyManager {
      * @see #createAdminSupportIntent(String)
      * @hide
      */
-    @TestApi @SystemApi
+    @SystemApi
     public static final String EXTRA_RESTRICTION = "android.app.extra.RESTRICTION";
 
     /**
@@ -2051,7 +2053,7 @@ public class DevicePolicyManager {
      * Enable the Home button during LockTask mode. Note that if a custom launcher is used, it has
      * to be registered as the default launcher with
      * {@link #addPersistentPreferredActivity(ComponentName, IntentFilter, ComponentName)}, and its
-     * package needs to be whitelisted for LockTask with
+     * package needs to be allowlisted for LockTask with
      * {@link #setLockTaskPackages(ComponentName, String[])}.
      *
      * @see #setLockTaskFeatures(ComponentName, int)
@@ -2092,7 +2094,7 @@ public class DevicePolicyManager {
     public static final int LOCK_TASK_FEATURE_KEYGUARD = 1 << 5;
 
     /**
-     * Enable blocking of non-whitelisted activities from being started into a locked task.
+     * Enable blocking of non-allowlisted activities from being started into a locked task.
      *
      * @see #setLockTaskFeatures(ComponentName, int)
      */
@@ -2688,13 +2690,11 @@ public class DevicePolicyManager {
      * </ul>
      */
     @SystemApi
-    @TestApi
     public static final String ACCOUNT_FEATURE_DEVICE_OR_PROFILE_OWNER_ALLOWED =
             "android.account.DEVICE_OR_PROFILE_OWNER_ALLOWED";
 
     /** @hide See {@link #ACCOUNT_FEATURE_DEVICE_OR_PROFILE_OWNER_ALLOWED} */
     @SystemApi
-    @TestApi
     public static final String ACCOUNT_FEATURE_DEVICE_OR_PROFILE_OWNER_DISALLOWED =
             "android.account.DEVICE_OR_PROFILE_OWNER_DISALLOWED";
 
@@ -4124,7 +4124,7 @@ public class DevicePolicyManager {
     }
 
     /** @hide per-user version */
-    @UnsupportedAppUsage
+    @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
     public long getMaximumTimeToLock(@Nullable ComponentName admin, int userHandle) {
         if (mService != null) {
             try {
@@ -4206,7 +4206,7 @@ public class DevicePolicyManager {
     }
 
     /** @hide per-user version */
-    @UnsupportedAppUsage
+    @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
     @RequiresFeature(PackageManager.FEATURE_SECURE_LOCK_SCREEN)
     public long getRequiredStrongAuthTimeout(@Nullable ComponentName admin, @UserIdInt int userId) {
         if (mService != null) {
@@ -4514,7 +4514,7 @@ public class DevicePolicyManager {
      *            of the device admin that sets the proxy.
      * @hide
      */
-    @UnsupportedAppUsage
+    @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
     public @Nullable ComponentName setGlobalProxy(@NonNull ComponentName admin, Proxy proxySpec,
             List<String> exclusionList ) {
         throwIfParentInstance("setGlobalProxy");
@@ -4532,30 +4532,10 @@ public class DevicePolicyManager {
                     if (!proxySpec.type().equals(Proxy.Type.HTTP)) {
                         throw new IllegalArgumentException();
                     }
-                    InetSocketAddress sa = (InetSocketAddress)proxySpec.address();
-                    String hostName = sa.getHostName();
-                    int port = sa.getPort();
-                    StringBuilder hostBuilder = new StringBuilder();
-                    hostSpec = hostBuilder.append(hostName)
-                        .append(":").append(Integer.toString(port)).toString();
-                    if (exclusionList == null) {
-                        exclSpec = "";
-                    } else {
-                        StringBuilder listBuilder = new StringBuilder();
-                        boolean firstDomain = true;
-                        for (String exclDomain : exclusionList) {
-                            if (!firstDomain) {
-                                listBuilder = listBuilder.append(",");
-                            } else {
-                                firstDomain = false;
-                            }
-                            listBuilder = listBuilder.append(exclDomain.trim());
-                        }
-                        exclSpec = listBuilder.toString();
-                    }
-                    if (android.net.Proxy.validate(hostName, Integer.toString(port), exclSpec)
-                            != android.net.Proxy.PROXY_VALID)
-                        throw new IllegalArgumentException();
+                    final Pair<String, String> proxyParams =
+                            getProxyParameters(proxySpec, exclusionList);
+                    hostSpec = proxyParams.first;
+                    exclSpec = proxyParams.second;
                 }
                 return mService.setGlobalProxy(admin, hostSpec, exclSpec);
             } catch (RemoteException e) {
@@ -4563,6 +4543,35 @@ public class DevicePolicyManager {
             }
         }
         return null;
+    }
+
+    /**
+     * Build HTTP proxy parameters for {@link IDevicePolicyManager#setGlobalProxy}.
+     * @throws IllegalArgumentException Invalid proxySpec
+     * @hide
+     */
+    @VisibleForTesting
+    public Pair<String, String> getProxyParameters(Proxy proxySpec, List<String> exclusionList) {
+        InetSocketAddress sa = (InetSocketAddress) proxySpec.address();
+        String hostName = sa.getHostName();
+        int port = sa.getPort();
+        final List<String> trimmedExclList;
+        if (exclusionList == null) {
+            trimmedExclList = Collections.emptyList();
+        } else {
+            trimmedExclList = new ArrayList<>(exclusionList.size());
+            for (String exclDomain : exclusionList) {
+                trimmedExclList.add(exclDomain.trim());
+            }
+        }
+        final ProxyInfo info = ProxyInfo.buildDirectProxy(hostName, port, trimmedExclList);
+        // The hostSpec is built assuming that there is a specified port and hostname,
+        // but ProxyInfo.isValid() accepts 0 / empty as unspecified: also reject them.
+        if (port == 0 || TextUtils.isEmpty(hostName) || !info.isValid()) {
+            throw new IllegalArgumentException();
+        }
+
+        return new Pair<>(hostName + ":" + port, TextUtils.join(",", trimmedExclList));
     }
 
     /**
@@ -4719,7 +4728,7 @@ public class DevicePolicyManager {
     /**
      * Disable trust agents on secure keyguard screens (e.g. PIN/Pattern/Password).
      * By setting this flag alone, all trust agents are disabled. If the admin then wants to
-     * whitelist specific features of some trust agent, {@link #setTrustAgentConfiguration} can be
+     * allowlist specific features of some trust agent, {@link #setTrustAgentConfiguration} can be
      * used in conjuction to set trust-agent-specific configurations.
      */
     public static final int KEYGUARD_DISABLE_TRUST_AGENTS = 1 << 4;
@@ -5700,7 +5709,7 @@ public class DevicePolicyManager {
      * The call will fail if called with the package name of an unsupported VPN app.
      * <p> Enabling lockdown via {@code lockdownEnabled} argument carries the risk that any failure
      * of the VPN provider could break networking for all apps. This method clears any lockdown
-     * whitelist set by {@link #setAlwaysOnVpnPackage(ComponentName, String, boolean, Set)}.
+     * allowlist set by {@link #setAlwaysOnVpnPackage(ComponentName, String, boolean, Set)}.
      *
      * @param vpnPackage The package name for an installed VPN app on the device, or {@code null} to
      *        remove an existing always-on VPN configuration.
@@ -5722,36 +5731,36 @@ public class DevicePolicyManager {
      * admin to specify a set of apps that should be able to access the network directly when VPN
      * is not connected. When VPN connects these apps switch over to VPN if allowed to use that VPN.
      * System apps can always bypass VPN.
-     * <p> Note that the system doesn't update the whitelist when packages are installed or
+     * <p> Note that the system doesn't update the allowlist when packages are installed or
      * uninstalled, the admin app must call this method to keep the list up to date.
-     * <p> When {@code lockdownEnabled} is false {@code lockdownWhitelist} is ignored . When
-     * {@code lockdownEnabled} is {@code true} and {@code lockdownWhitelist} is {@code null} or
+     * <p> When {@code lockdownEnabled} is false {@code lockdownAllowlist} is ignored . When
+     * {@code lockdownEnabled} is {@code true} and {@code lockdownAllowlist} is {@code null} or
      * empty, only system apps can bypass VPN.
      * <p> Setting always-on VPN package to {@code null} or using
-     * {@link #setAlwaysOnVpnPackage(ComponentName, String, boolean)} clears lockdown whitelist.
+     * {@link #setAlwaysOnVpnPackage(ComponentName, String, boolean)} clears lockdown allowlist.
      *
      * @param vpnPackage package name for an installed VPN app on the device, or {@code null}
      *         to remove an existing always-on VPN configuration
      * @param lockdownEnabled {@code true} to disallow networking when the VPN is not connected or
      *         {@code false} otherwise. This has no effect when clearing.
-     * @param lockdownWhitelist Packages that will be able to access the network directly when VPN
+     * @param lockdownAllowlist Packages that will be able to access the network directly when VPN
      *         is in lockdown mode but not connected. Has no effect when clearing.
      * @throws SecurityException if {@code admin} is not a device or a profile
      *         owner.
      * @throws NameNotFoundException if {@code vpnPackage} or one of
-     *         {@code lockdownWhitelist} is not installed.
+     *         {@code lockdownAllowlist} is not installed.
      * @throws UnsupportedOperationException if {@code vpnPackage} exists but does
      *         not support being set as always-on, or if always-on VPN is not
      *         available.
      */
     public void setAlwaysOnVpnPackage(@NonNull ComponentName admin, @Nullable String vpnPackage,
-            boolean lockdownEnabled, @Nullable Set<String> lockdownWhitelist)
+            boolean lockdownEnabled, @Nullable Set<String> lockdownAllowlist)
             throws NameNotFoundException {
         throwIfParentInstance("setAlwaysOnVpnPackage");
         if (mService != null) {
             try {
                 mService.setAlwaysOnVpnPackage(admin, vpnPackage, lockdownEnabled,
-                        lockdownWhitelist == null ? null : new ArrayList<>(lockdownWhitelist));
+                        lockdownAllowlist == null ? null : new ArrayList<>(lockdownAllowlist));
             } catch (ServiceSpecificException e) {
                 switch (e.errorCode) {
                     case ERROR_VPN_PACKAGE_NOT_FOUND:
@@ -5826,9 +5835,9 @@ public class DevicePolicyManager {
         throwIfParentInstance("getAlwaysOnVpnLockdownWhitelist");
         if (mService != null) {
             try {
-                final List<String> whitelist =
-                        mService.getAlwaysOnVpnLockdownWhitelist(admin);
-                return whitelist == null ? null : new HashSet<>(whitelist);
+                final List<String> allowlist =
+                        mService.getAlwaysOnVpnLockdownAllowlist(admin);
+                return allowlist == null ? null : new HashSet<>(allowlist);
             } catch (RemoteException e) {
                 throw e.rethrowFromSystemServer();
             }
@@ -6327,7 +6336,7 @@ public class DevicePolicyManager {
     /**
      * @hide
      */
-    @UnsupportedAppUsage
+    @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
     public void setActiveAdmin(@NonNull ComponentName policyReceiver, boolean refreshing,
             int userHandle) {
         if (mService != null) {
@@ -6688,8 +6697,7 @@ public class DevicePolicyManager {
      * @hide
      */
     @SystemApi
-    @TestApi
-    @SuppressLint("Doclava125")
+    @SuppressLint("RequiresPermission")
     public boolean isDeviceManaged() {
         try {
             return mService.hasDeviceOwner();
@@ -7042,7 +7050,7 @@ public class DevicePolicyManager {
     /**
      * @hide
      */
-    @UnsupportedAppUsage
+    @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
     public @Nullable ComponentName getProfileOwnerAsUser(final int userId) {
         if (mService != null) {
             try {
@@ -7457,7 +7465,7 @@ public class DevicePolicyManager {
     }
 
     /** @hide per-user version */
-    @UnsupportedAppUsage
+    @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
     @RequiresFeature(PackageManager.FEATURE_SECURE_LOCK_SCREEN)
     public @Nullable List<PersistableBundle> getTrustAgentConfiguration(
             @Nullable ComponentName admin, @NonNull ComponentName agent, int userHandle) {
@@ -7972,7 +7980,7 @@ public class DevicePolicyManager {
      * {@link #setApplicationHidden(ComponentName, String, boolean)})
      *
      * @param admin Which {@link DeviceAdminReceiver} this request is associated with.
-     * @param packageList List of package names to whitelist
+     * @param packageList List of package names to allowlist
      * @return true if setting the restriction succeeded. It will fail if called outside a managed
      * profile
      * @throws SecurityException if {@code admin} is not a profile owner.
@@ -9073,7 +9081,7 @@ public class DevicePolicyManager {
     }
 
     /**
-     * Called by device owners to set the user's master location setting.
+     * Called by device owners to set the user's global location setting.
      *
      * @param admin Which {@link DeviceAdminReceiver} this request is associated with
      * @param locationEnabled whether location should be enabled or disabled
@@ -9172,11 +9180,11 @@ public class DevicePolicyManager {
     }
 
     /**
-     * Called by profile or device owners to set the master volume mute on or off.
+     * Called by profile or device owners to set the global volume mute on or off.
      * This has no effect when set on a managed profile.
      *
      * @param admin Which {@link DeviceAdminReceiver} this request is associated with.
-     * @param on {@code true} to mute master volume, {@code false} to turn mute off.
+     * @param on {@code true} to mute global volume, {@code false} to turn mute off.
      * @throws SecurityException if {@code admin} is not a device or profile owner.
      */
     public void setMasterVolumeMuted(@NonNull ComponentName admin, boolean on) {
@@ -9191,10 +9199,10 @@ public class DevicePolicyManager {
     }
 
     /**
-     * Called by profile or device owners to check whether the master volume mute is on or off.
+     * Called by profile or device owners to check whether the global volume mute is on or off.
      *
      * @param admin Which {@link DeviceAdminReceiver} this request is associated with.
-     * @return {@code true} if master volume is muted, {@code false} if it's not.
+     * @return {@code true} if global volume is muted, {@code false} if it's not.
      * @throws SecurityException if {@code admin} is not a device or profile owner.
      */
     public boolean isMasterVolumeMuted(@NonNull ComponentName admin) {
@@ -9265,14 +9273,14 @@ public class DevicePolicyManager {
     /**
      * Called by the profile owner of a managed profile to enable widget providers from a given
      * package to be available in the parent profile. As a result the user will be able to add
-     * widgets from the white-listed package running under the profile to a widget host which runs
+     * widgets from the allowlisted package running under the profile to a widget host which runs
      * under the parent profile, for example the home screen. Note that a package may have zero or
      * more provider components, where each component provides a different widget type.
      * <p>
-     * <strong>Note:</strong> By default no widget provider package is white-listed.
+     * <strong>Note:</strong> By default no widget provider package is allowlisted.
      *
      * @param admin Which {@link DeviceAdminReceiver} this request is associated with.
-     * @param packageName The package from which widget providers are white-listed.
+     * @param packageName The package from which widget providers are allowlisted.
      * @return Whether the package was added.
      * @throws SecurityException if {@code admin} is not a profile owner.
      * @see #removeCrossProfileWidgetProvider(android.content.ComponentName, String)
@@ -9296,10 +9304,10 @@ public class DevicePolicyManager {
      * should have been added via
      * {@link #addCrossProfileWidgetProvider( android.content.ComponentName, String)}.
      * <p>
-     * <strong>Note:</strong> By default no widget provider package is white-listed.
+     * <strong>Note:</strong> By default no widget provider package is allowlisted.
      *
      * @param admin Which {@link DeviceAdminReceiver} this request is associated with.
-     * @param packageName The package from which widget providers are no longer white-listed.
+     * @param packageName The package from which widget providers are no longer allowlisted.
      * @return Whether the package was removed.
      * @throws SecurityException if {@code admin} is not a profile owner.
      * @see #addCrossProfileWidgetProvider(android.content.ComponentName, String)
@@ -9323,7 +9331,7 @@ public class DevicePolicyManager {
      * available in the parent profile.
      *
      * @param admin Which {@link DeviceAdminReceiver} this request is associated with.
-     * @return The white-listed package list.
+     * @return The allowlisted package list.
      * @see #addCrossProfileWidgetProvider(android.content.ComponentName, String)
      * @see #removeCrossProfileWidgetProvider(android.content.ComponentName, String)
      * @throws SecurityException if {@code admin} is not a profile owner.
@@ -10401,8 +10409,7 @@ public class DevicePolicyManager {
      * @hide
      */
     @SystemApi
-    @TestApi
-    @SuppressLint("Doclava125")
+    @SuppressLint("RequiresPermission")
     public @Nullable CharSequence getDeviceOwnerOrganizationName() {
         try {
             return mService.getDeviceOwnerOrganizationName();
@@ -10647,7 +10654,7 @@ public class DevicePolicyManager {
         }
     }
 
-    @UnsupportedAppUsage
+    @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
     private void throwIfParentInstance(String functionName) {
         if (mParentInstance) {
             throw new SecurityException(functionName + " cannot be called on the parent instance");
@@ -11476,7 +11483,7 @@ public class DevicePolicyManager {
             return PRIVATE_DNS_SET_ERROR_FAILURE_SETTING;
         }
 
-        if (NetworkUtils.isWeaklyValidatedHostname(privateDnsHost)) {
+        if (NetworkUtilsInternal.isWeaklyValidatedHostname(privateDnsHost)) {
             if (!PrivateDnsConnectivityChecker.canConnectToPrivateDnsServer(privateDnsHost)) {
                 return PRIVATE_DNS_SET_ERROR_HOST_NOT_SERVING;
             }
@@ -11647,7 +11654,7 @@ public class DevicePolicyManager {
      * called, no package is allowed to access cross-profile calendar APIs by default.
      *
      * @param admin which {@link DeviceAdminReceiver} this request is associated with
-     * @param packageNames set of packages to be whitelisted
+     * @param packageNames set of packages to be allowlisted
      * @throws SecurityException if {@code admin} is not a profile owner
      *
      * @see #getCrossProfileCalendarPackages(ComponentName)
@@ -11754,7 +11761,7 @@ public class DevicePolicyManager {
     }
 
     /**
-     * Sets the set of admin-whitelisted package names that are allowed to request user consent for
+     * Sets the set of admin-allowlisted package names that are allowed to request user consent for
      * cross-profile communication.
      *
      * <p>Assumes that the caller is a profile owner and is the given {@code admin}.
@@ -11762,11 +11769,11 @@ public class DevicePolicyManager {
      * <p>Previous calls are overridden by each subsequent call to this method.
      *
      * <p>Note that other apps may be able to request user consent for cross-profile communication
-     * if they have been explicitly whitelisted by the OEM.
+     * if they have been explicitly allowlisted by the OEM.
      *
      * <p>When previously-set cross-profile packages are missing from {@code packageNames}, the
      * app-op for {@code INTERACT_ACROSS_PROFILES} will be reset for those packages. This will not
-     * occur for packages that are whitelisted by the OEM.
+     * occur for packages that are allowlisted by the OEM.
      *
      * @param admin the {@link DeviceAdminReceiver} this request is associated with
      * @param packageNames the new cross-profile package names
@@ -11791,7 +11798,7 @@ public class DevicePolicyManager {
      * <p>Assumes that the caller is a profile owner and is the given {@code admin}.
      *
      * <p>Note that other apps not included in the returned set may be able to request user consent
-     * for cross-profile communication if they have been explicitly whitelisted by the OEM.
+     * for cross-profile communication if they have been explicitly allowlisted by the OEM.
      *
      * @param admin the {@link DeviceAdminReceiver} this request is associated with
      * @return the set of package names the admin has previously set as allowed to request user
@@ -11822,7 +11829,7 @@ public class DevicePolicyManager {
      * #vendor_cross_profile_apps}.</li>
      * </ul>
      *
-     * @return the combined set of whitelisted package names set via
+     * @return the combined set of allowlisted package names set via
      * {@link #setCrossProfilePackages(ComponentName, Set)}, {@link com.android.internal.R.array
      * #cross_profile_apps}, and {@link com.android.internal.R.array#vendor_cross_profile_apps}.
      *

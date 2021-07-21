@@ -124,7 +124,7 @@ public class IorapForwardingService extends SystemService {
         try {
             iorap = IIorap.Stub.asInterface(ServiceManager.getServiceOrThrow("iorapd"));
         } catch (ServiceManager.ServiceNotFoundException e) {
-            handleRemoteError(e);
+            Log.w(TAG, e.getMessage());
             return null;
         }
 
@@ -158,7 +158,11 @@ public class IorapForwardingService extends SystemService {
         // These two mendel flags should match those in iorapd native process
         // system/iorapd/src/common/property.h
         boolean isTracingEnabled =
+<<<<<<< HEAD
             getMendelFlag("iorap_perfetto_enable", "iorapd.perfetto.enable", true);
+=======
+            getMendelFlag("iorap_perfetto_enable", "iorapd.perfetto.enable", false);
+>>>>>>> 1a7b0835ced351de3f8f73b29a3b40996d335e65
         boolean isReadAheadEnabled =
             getMendelFlag("iorap_readahead_enable", "iorapd.readahead.enable", false);
         // Same as the property in iorapd.rc -- disabling this will mean the 'iorapd' binder process

@@ -100,11 +100,13 @@ public:
         int fps;
         int width;
         int height;
+        bool progressEnabled;
         Vector<Part> parts;
         String8 audioConf;
         String8 fileName;
         ZipFileRO* zip;
         Font clockFont;
+        Font progressFont;
     };
 
     // All callbacks will be called from this class's internal thread.
@@ -168,6 +170,10 @@ private:
     bool movie();
     void drawText(const char* str, const Font& font, bool bold, int* x, int* y);
     void drawClock(const Font& font, const int xPos, const int yPos);
+<<<<<<< HEAD
+=======
+    void drawProgress(int percent, const Font& font, const int xPos, const int yPos);
+>>>>>>> 1a7b0835ced351de3f8f73b29a3b40996d335e65
     void fadeFrame(int frameLeft, int frameBottom, int frameWidth, int frameHeight,
                    const Animation::Part& part, int fadedFramesCount);
     bool validClock(const Animation::Part& part);
@@ -184,7 +190,12 @@ private:
     void resizeSurface(int newWidth, int newHeight);
     void projectSceneToWindow();
 
+<<<<<<< HEAD
     bool shouldStopPlayingPart(const Animation::Part& part, int fadedFramesCount);
+=======
+    bool shouldStopPlayingPart(const Animation::Part& part, int fadedFramesCount,
+                               int lastDisplayedProgress);
+>>>>>>> 1a7b0835ced351de3f8f73b29a3b40996d335e65
     void checkExit();
 
     void handleViewport(nsecs_t timestep);

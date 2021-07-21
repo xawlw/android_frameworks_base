@@ -44,6 +44,7 @@ import java.io.PrintWriter;
  * this effect, it's helpful to carry the entropy pool information across
  * shutdowns and startups.
  *
+<<<<<<< HEAD
  * <p>On systems with Hardware RNG (/dev/hw_random), a block of output from HW
  * RNG is mixed into the Linux RNG on EntropyMixer's startup and whenever
  * EntropyMixer periodically runs to save a block of output from Linux RNG on
@@ -53,6 +54,10 @@ import java.io.PrintWriter;
  *
  * <p>This class was modeled after the script in the
  * <a href="http://www.kernel.org/doc/man-pages/online/pages/man4/random.4.html">
+=======
+ * <p>This class was modeled after the script in the
+ * <a href="https://man7.org/linux/man-pages/man4/random.4.html">
+>>>>>>> 1a7b0835ced351de3f8f73b29a3b40996d335e65
  * random(4) manual page</a>.
  */
 public class EntropyMixer extends Binder {

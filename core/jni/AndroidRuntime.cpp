@@ -22,6 +22,7 @@
 #include <android-base/properties.h>
 #include <android/graphics/jni_runtime.h>
 #include <android_runtime/AndroidRuntime.h>
+#include <android_runtime/threads.h>
 #include <assert.h>
 #include <binder/IBinder.h>
 #include <binder/IPCThreadState.h>
@@ -50,6 +51,7 @@
 #include "jni.h"
 
 using namespace android;
+using android::base::GetBoolProperty;
 using android::base::GetProperty;
 
 extern int register_android_os_Binder(JNIEnv* env);
@@ -187,11 +189,13 @@ extern int register_android_animation_PropertyValuesHolder(JNIEnv *env);
 extern int register_android_security_Scrypt(JNIEnv *env);
 extern int register_com_android_internal_content_NativeLibraryHelper(JNIEnv *env);
 extern int register_com_android_internal_content_om_OverlayConfig(JNIEnv *env);
+extern int register_com_android_internal_net_NetworkUtilsInternal(JNIEnv* env);
 extern int register_com_android_internal_os_ClassLoaderFactory(JNIEnv* env);
 extern int register_com_android_internal_os_FuseAppLoop(JNIEnv* env);
 extern int register_com_android_internal_os_KernelCpuUidBpfMapReader(JNIEnv *env);
 extern int register_com_android_internal_os_KernelSingleUidTimeReader(JNIEnv *env);
 extern int register_com_android_internal_os_Zygote(JNIEnv *env);
+extern int register_com_android_internal_os_ZygoteCommandBuffer(JNIEnv *env);
 extern int register_com_android_internal_os_ZygoteInit(JNIEnv *env);
 extern int register_com_android_internal_util_VirtualRefBasePtr(JNIEnv *env);
 
@@ -627,6 +631,9 @@ int AndroidRuntime::startVm(JavaVM** pJavaVM, JNIEnv** pEnv, bool zygote, bool p
     char hotstartupsamplesOptsBuf[sizeof("-Xps-hot-startup-method-samples:")-1 + PROPERTY_VALUE_MAX];
     char saveResolvedClassesDelayMsOptsBuf[
             sizeof("-Xps-save-resolved-classes-delay-ms:")-1 + PROPERTY_VALUE_MAX];
+    char profileMinSavePeriodOptsBuf[sizeof("-Xps-min-save-period-ms:")-1 + PROPERTY_VALUE_MAX];
+    char profileMinFirstSaveOptsBuf[
+            sizeof("-Xps-min-first-save-ms:")-1 + PROPERTY_VALUE_MAX];
     char madviseRandomOptsBuf[sizeof("-XX:MadviseRandomAccess:")-1 + PROPERTY_VALUE_MAX];
     char madviseWillNeedFileSizeVdex[
             sizeof("-XMadviseWillNeedVdexFileSize:")-1 + PROPERTY_VALUE_MAX];
@@ -659,6 +666,8 @@ int AndroidRuntime::startVm(JavaVM** pJavaVM, JNIEnv** pEnv, bool zygote, bool p
     char extraOptsBuf[PROPERTY_VALUE_MAX];
     char voldDecryptBuf[PROPERTY_VALUE_MAX];
     char perfettoHprofOptBuf[sizeof("-XX:PerfettoHprof=") + PROPERTY_VALUE_MAX];
+    char perfettoJavaHeapStackOptBuf[
+            sizeof("-XX:PerfettoJavaHeapStackProf=") + PROPERTY_VALUE_MAX];
     enum {
       kEMDefault,
       kEMIntPortable,
@@ -673,6 +682,7 @@ int AndroidRuntime::startVm(JavaVM** pJavaVM, JNIEnv** pEnv, bool zygote, bool p
     char methodTraceFileBuf[sizeof("-Xmethod-trace-file:") + PROPERTY_VALUE_MAX];
     char methodTraceFileSizeBuf[sizeof("-Xmethod-trace-file-size:") + PROPERTY_VALUE_MAX];
     std::string fingerprintBuf;
+    char javaZygoteForkLoopBuf[sizeof("-XX:ForceJavaZygoteForkLoop=") + PROPERTY_VALUE_MAX];
     char jdwpProviderBuf[sizeof("-XjdwpProvider:") - 1 + PROPERTY_VALUE_MAX];
     char opaqueJniIds[sizeof("-Xopaque-jni-ids:") - 1 + PROPERTY_VALUE_MAX];
     char bootImageBuf[sizeof("-Ximage:") - 1 + PROPERTY_VALUE_MAX];
@@ -725,17 +735,7 @@ int AndroidRuntime::startVm(JavaVM** pJavaVM, JNIEnv** pEnv, bool zygote, bool p
         ALOGI("Leaving lock profiling enabled");
     }
 
-    bool checkJni = false;
-    property_get("dalvik.vm.checkjni", propBuf, "");
-    if (strcmp(propBuf, "true") == 0) {
-        checkJni = true;
-    } else if (strcmp(propBuf, "false") != 0) {
-        /* property is neither true nor false; fall back on kernel parameter */
-        property_get("ro.kernel.android.checkjni", propBuf, "");
-        if (propBuf[0] == '1') {
-            checkJni = true;
-        }
-    }
+    const bool checkJni = GetBoolProperty("dalvik.vm.checkjni", false);
     ALOGV("CheckJNI is %s\n", checkJni ? "ON" : "OFF");
     if (checkJni) {
         /* extended JNI checking */
@@ -743,6 +743,11 @@ int AndroidRuntime::startVm(JavaVM** pJavaVM, JNIEnv** pEnv, bool zygote, bool p
 
         /* with -Xcheck:jni, this provides a JNI function call trace */
         //addOption("-verbose:jni");
+    }
+
+    const bool odsignVerificationSuccess = GetBoolProperty("odsign.verification.success", false);
+    if (!odsignVerificationSuccess) {
+        addOption("-Xdeny-art-apex-data-files");
     }
 
     property_get("dalvik.vm.execution-mode", propBuf, "");
@@ -782,6 +787,10 @@ int AndroidRuntime::startVm(JavaVM** pJavaVM, JNIEnv** pEnv, bool zygote, bool p
     // and we do not want to enable it in tests.
     parseRuntimeOption("dalvik.vm.perfetto_hprof", perfettoHprofOptBuf, "-XX:PerfettoHprof=",
                        "true");
+
+    // Enable PerfettoJavaHeapStackProf in the zygote
+    parseRuntimeOption("dalvik.vm.perfetto_javaheap", perfettoJavaHeapStackOptBuf,
+                       "-XX:PerfettoJavaHeapStackProf=", "true");
 
     if (primary_zygote) {
         addOption("-Xprimaryzygote");
@@ -866,6 +875,12 @@ int AndroidRuntime::startVm(JavaVM** pJavaVM, JNIEnv** pEnv, bool zygote, bool p
     parseRuntimeOption("dalvik.vm.ps-resolved-classes-delay-ms", saveResolvedClassesDelayMsOptsBuf,
             "-Xps-save-resolved-classes-delay-ms:");
 
+    parseRuntimeOption("dalvik.vm.ps-min-save-period-ms", profileMinSavePeriodOptsBuf,
+            "-Xps-min-save-period-ms:");
+
+    parseRuntimeOption("dalvik.vm.ps-min-first-save-ms", profileMinFirstSaveOptsBuf,
+            "-Xps-min-first-save-ms:");
+
     property_get("ro.config.low_ram", propBuf, "");
     if (strcmp(propBuf, "true") == 0) {
       addOption("-XX:LowMemoryMode");
@@ -889,6 +904,13 @@ int AndroidRuntime::startVm(JavaVM** pJavaVM, JNIEnv** pEnv, bool zygote, bool p
     }
 
     parseRuntimeOption("dalvik.vm.backgroundgctype", backgroundgcOptsBuf, "-XX:BackgroundGC=");
+
+    /*
+     * Enable/disable zygote native fork loop.
+     */
+    parseRuntimeOption("dalvik.vm.force-java-zygote-fork-loop",
+                       javaZygoteForkLoopBuf,
+                       "-XX:ForceJavaZygoteForkLoop=");
 
     /*
      * Enable debugging only for apps forked from zygote.
@@ -1317,14 +1339,15 @@ void AndroidRuntime::onVmCreated(JNIEnv* env)
     return env;
 }
 
+extern "C" {
+
 /*
  * Makes the current thread visible to the VM.
  *
  * The JNIEnv pointer returned is only valid for the current thread, and
  * thus must be tucked into thread-local storage.
  */
-static int javaAttachThread(const char* threadName, JNIEnv** pEnv)
-{
+bool androidJavaAttachThread(const char* threadName) {
     JavaVMAttachArgs args;
     JavaVM* vm;
     jint result;
@@ -1336,18 +1359,17 @@ static int javaAttachThread(const char* threadName, JNIEnv** pEnv)
     args.name = (char*) threadName;
     args.group = NULL;
 
-    result = vm->AttachCurrentThread(pEnv, (void*) &args);
-    if (result != JNI_OK)
-        ALOGI("NOTE: attach of thread '%s' failed\n", threadName);
+    JNIEnv* env;
+    result = vm->AttachCurrentThread(&env, (void*)&args);
+    if (result != JNI_OK) ALOGI("NOTE: attach of thread '%s' failed\n", threadName);
 
-    return result;
+    return result == JNI_OK;
 }
 
 /*
  * Detach the current thread from the set visible to the VM.
  */
-static int javaDetachThread(void)
-{
+bool androidJavaDetachThread(void) {
     JavaVM* vm;
     jint result;
 
@@ -1355,10 +1377,11 @@ static int javaDetachThread(void)
     assert(vm != NULL);
 
     result = vm->DetachCurrentThread();
-    if (result != JNI_OK)
-        ALOGE("ERROR: thread detach failed\n");
-    return result;
+    if (result != JNI_OK) ALOGE("ERROR: thread detach failed\n");
+    return result == JNI_OK;
 }
+
+} // extern "C"
 
 /*
  * When starting a native thread that will be visible from the VM, we
@@ -1370,18 +1393,16 @@ static int javaDetachThread(void)
     void* userData = ((void **)args)[1];
     char* name = (char*) ((void **)args)[2];        // we own this storage
     free(args);
-    JNIEnv* env;
     int result;
 
     /* hook us into the VM */
-    if (javaAttachThread(name, &env) != JNI_OK)
-        return -1;
+    if (!androidJavaAttachThread(name)) return -1;
 
     /* start the thread running */
     result = (*(android_thread_func_t)start)(userData);
 
     /* unhook us */
-    javaDetachThread();
+    (void)androidJavaDetachThread();
     free(name);
 
     return result;
@@ -1542,8 +1563,10 @@ static const RegJNIRec gRegJNI[] = {
         REG_JNI(register_android_os_SharedMemory),
         REG_JNI(register_android_os_incremental_IncrementalManager),
         REG_JNI(register_com_android_internal_content_om_OverlayConfig),
+        REG_JNI(register_com_android_internal_net_NetworkUtilsInternal),
         REG_JNI(register_com_android_internal_os_ClassLoaderFactory),
         REG_JNI(register_com_android_internal_os_Zygote),
+        REG_JNI(register_com_android_internal_os_ZygoteCommandBuffer),
         REG_JNI(register_com_android_internal_os_ZygoteInit),
         REG_JNI(register_com_android_internal_util_VirtualRefBasePtr),
         REG_JNI(register_android_hardware_Camera),

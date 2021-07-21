@@ -19,6 +19,7 @@ package com.android.server.job.controllers;
 import static android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET;
 import static android.net.NetworkCapabilities.NET_CAPABILITY_NOT_CONGESTED;
 import static android.net.NetworkCapabilities.NET_CAPABILITY_NOT_METERED;
+import static android.net.NetworkCapabilities.NET_CAPABILITY_NOT_VCN_MANAGED;
 import static android.net.NetworkCapabilities.NET_CAPABILITY_VALIDATED;
 import static android.net.NetworkCapabilities.TRANSPORT_CELLULAR;
 
@@ -364,7 +365,7 @@ public class ConnectivityControllerTest {
                 .setAppIdleWhitelist(eq(UID_BLUE), anyBoolean());
         assertTrue(controller.isStandbyExceptionRequestedLocked(UID_RED));
         assertFalse(controller.isStandbyExceptionRequestedLocked(UID_BLUE));
-        // Whitelisting doesn't need to be requested again.
+        // Allowlisting doesn't need to be requested again.
         controller.requestStandbyExceptionLocked(red);
         inOrder.verify(mNetPolicyManagerInternal, never())
                 .setAppIdleWhitelist(eq(UID_RED), anyBoolean());
@@ -434,7 +435,7 @@ public class ConnectivityControllerTest {
                 .setAppIdleWhitelist(eq(UID_BLUE), anyBoolean());
         assertTrue(controller.isStandbyExceptionRequestedLocked(UID_RED));
         assertFalse(controller.isStandbyExceptionRequestedLocked(UID_BLUE));
-        // Whitelisting doesn't need to be requested again.
+        // Allowlisting doesn't need to be requested again.
         controller.evaluateStateLocked(red);
         inOrder.verify(mNetPolicyManagerInternal, never())
                 .setAppIdleWhitelist(eq(UID_RED), anyBoolean());
@@ -473,7 +474,7 @@ public class ConnectivityControllerTest {
         assertFalse(controller.isStandbyExceptionRequestedLocked(UID_RED));
         assertFalse(controller.isStandbyExceptionRequestedLocked(UID_BLUE));
 
-        // Test that a currently whitelisted uid is now removed.
+        // Test that a currently allowlisted uid is now removed.
         controller.requestStandbyExceptionLocked(blue);
         inOrder.verify(mNetPolicyManagerInternal, times(1))
                 .setAppIdleWhitelist(eq(UID_BLUE), eq(true));
@@ -626,6 +627,7 @@ public class ConnectivityControllerTest {
 
     private static NetworkCapabilities createCapabilities() {
         return new NetworkCapabilities().addCapability(NET_CAPABILITY_INTERNET)
+                .addCapability(NET_CAPABILITY_NOT_VCN_MANAGED)
                 .addCapability(NET_CAPABILITY_VALIDATED);
     }
 

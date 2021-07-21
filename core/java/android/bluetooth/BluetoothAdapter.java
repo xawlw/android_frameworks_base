@@ -17,7 +17,10 @@
 
 package android.bluetooth;
 
+import static java.util.Objects.requireNonNull;
+
 import android.Manifest;
+import android.annotation.CallbackExecutor;
 import android.annotation.IntDef;
 import android.annotation.NonNull;
 import android.annotation.Nullable;
@@ -27,6 +30,7 @@ import android.annotation.SdkConstant.SdkConstantType;
 import android.annotation.SystemApi;
 import android.app.ActivityThread;
 import android.app.PropertyInvalidatedCache;
+import android.bluetooth.BluetoothDevice.Transport;
 import android.bluetooth.BluetoothProfile.ConnectionPolicy;
 import android.bluetooth.le.BluetoothLeAdvertiser;
 import android.bluetooth.le.BluetoothLeScanner;
@@ -40,6 +44,7 @@ import android.compat.annotation.UnsupportedAppUsage;
 import android.content.Context;
 import android.os.BatteryStats;
 import android.os.Binder;
+import android.os.Build;
 import android.os.IBinder;
 import android.os.ParcelUuid;
 import android.os.RemoteException;
@@ -689,6 +694,8 @@ public final class BluetoothAdapter {
     private final Map<LeScanCallback, ScanCallback> mLeScanClients;
     private static final Map<BluetoothDevice, List<Pair<OnMetadataChangedListener, Executor>>>
                 sMetadataListeners = new HashMap<>();
+    private final Map<BluetoothConnectionCallback, Executor>
+            mBluetoothConnectionCallbackExecutorMap = new HashMap<>();
 
     /**
      * Bluetooth metadata listener. Overrides the default BluetoothMetadataListener
@@ -1173,7 +1180,7 @@ public final class BluetoothAdapter {
      * @return true to indicate adapter shutdown has begun, or false on immediate error
      * @hide
      */
-    @UnsupportedAppUsage
+    @UnsupportedAppUsage(trackingBug = 171933273)
     public boolean disable(boolean persist) {
 
         try {
@@ -1222,7 +1229,7 @@ public final class BluetoothAdapter {
      * @return true to indicate that the config file was successfully cleared
      * @hide
      */
-    @UnsupportedAppUsage
+    @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
     @RequiresPermission(Manifest.permission.BLUETOOTH_PRIVILEGED)
     public boolean factoryReset() {
         try {
@@ -1694,9 +1701,10 @@ public final class BluetoothAdapter {
      * <i>discoverable</i> (inquiry scan enabled). Many Bluetooth devices are
      * not discoverable by default, and need to be entered into a special mode.
      * <p>If Bluetooth state is not {@link #STATE_ON}, this API
-     * will return false. After turning on Bluetooth,
-     * wait for {@link #ACTION_STATE_CHANGED} with {@link #STATE_ON}
-     * to get the updated value.
+     * will return false. After turning on Bluetooth, wait for {@link #ACTION_STATE_CHANGED}
+     * with {@link #STATE_ON} to get the updated value.
+     * <p>If a device is currently bonding, this request will be queued and executed once that
+     * device has finished bonding. If a request is already queued, this request will be ignored.
      *
      * @return true on success, false on error
      */
@@ -1815,6 +1823,7 @@ public final class BluetoothAdapter {
         try {
             mServiceLock.readLock().lock();
             if (mService != null) {
+                if (DBG) Log.d(TAG, "removeActiveDevice, profiles: " + profiles);
                 return mService.removeActiveDevice(profiles);
             }
         } catch (RemoteException e) {
@@ -1859,6 +1868,9 @@ public final class BluetoothAdapter {
         try {
             mServiceLock.readLock().lock();
             if (mService != null) {
+                if (DBG) {
+                    Log.d(TAG, "setActiveDevice, device: " + device + ", profiles: " + profiles);
+                }
                 return mService.setActiveDevice(device, profiles);
             }
         } catch (RemoteException e) {
@@ -2485,7 +2497,7 @@ public final class BluetoothAdapter {
      * {@link #SOCKET_CHANNEL_AUTO_STATIC_NO_SDP} as channel number.
      *
      * @param channel RFCOMM channel to listen on
-     * @param mitm enforce man-in-the-middle protection for authentication.
+     * @param mitm enforce person-in-the-middle protection for authentication.
      * @param min16DigitPin enforce a pin key length og minimum 16 digit for sec mode 2
      * connections.
      * @return a listening RFCOMM BluetoothServerSocket
@@ -2543,8 +2555,8 @@ public final class BluetoothAdapter {
     /**
      * Create a listening, insecure RFCOMM Bluetooth socket with Service Record.
      * <p>The link key is not required to be authenticated, i.e the communication may be
-     * vulnerable to Man In the Middle attacks. For Bluetooth 2.1 devices,
-     * the link will be encrypted, as encryption is mandartory.
+     * vulnerable to Person In the Middle attacks. For Bluetooth 2.1 devices,
+     * the link will be encrypted, as encryption is mandatory.
      * For legacy devices (pre Bluetooth 2.1 devices) the link will not
      * be encrypted. Use {@link #listenUsingRfcommWithServiceRecord}, if an
      * encrypted and authenticated communication channel is desired.
@@ -2576,14 +2588,14 @@ public final class BluetoothAdapter {
      * Create a listening, encrypted,
      * RFCOMM Bluetooth socket with Service Record.
      * <p>The link will be encrypted, but the link key is not required to be authenticated
-     * i.e the communication is vulnerable to Man In the Middle attacks. Use
+     * i.e the communication is vulnerable to Person In the Middle attacks. Use
      * {@link #listenUsingRfcommWithServiceRecord}, to ensure an authenticated link key.
      * <p> Use this socket if authentication of link key is not possible.
      * For example, for Bluetooth 2.1 devices, if any of the devices does not have
      * an input and output capability or just has the ability to display a numeric key,
      * a secure socket connection is not possible and this socket can be used.
      * Use {@link #listenUsingInsecureRfcommWithServiceRecord}, if encryption is not required.
-     * For Bluetooth 2.1 devices, the link will be encrypted, as encryption is mandartory.
+     * For Bluetooth 2.1 devices, the link will be encrypted, as encryption is mandatory.
      * For more details, refer to the Security Model section 5.2 (vol 3) of
      * Bluetooth Core Specification version 2.1 + EDR.
      * <p>Use {@link BluetoothServerSocket#accept} to retrieve incoming
@@ -2606,7 +2618,7 @@ public final class BluetoothAdapter {
      * permissions, or channel in use.
      * @hide
      */
-    @UnsupportedAppUsage
+    @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
     public BluetoothServerSocket listenUsingEncryptedRfcommWithServiceRecord(String name, UUID uuid)
             throws IOException {
         return createNewRfcommSocketAndRecord(name, uuid, false, true);
@@ -2655,59 +2667,13 @@ public final class BluetoothAdapter {
     }
 
     /**
-     * Construct an encrypted, RFCOMM server socket.
-     * Call #accept to retrieve connections to this socket.
-     *
-     * @return An RFCOMM BluetoothServerSocket
-     * @throws IOException On error, for example Bluetooth not available, or insufficient
-     * permissions.
-     * @hide
-     */
-    public BluetoothServerSocket listenUsingEncryptedRfcommOn(int port) throws IOException {
-        BluetoothServerSocket socket =
-                new BluetoothServerSocket(BluetoothSocket.TYPE_RFCOMM, false, true, port);
-        int errno = socket.mSocket.bindListen();
-        if (port == SOCKET_CHANNEL_AUTO_STATIC_NO_SDP) {
-            socket.setChannel(socket.mSocket.getPort());
-        }
-        if (errno < 0) {
-            //TODO(BT): Throw the same exception error code
-            // that the previous code was using.
-            //socket.mSocket.throwErrnoNative(errno);
-            throw new IOException("Error: " + errno);
-        }
-        return socket;
-    }
-
-    /**
-     * Construct a SCO server socket.
-     * Call #accept to retrieve connections to this socket.
-     *
-     * @return A SCO BluetoothServerSocket
-     * @throws IOException On error, for example Bluetooth not available, or insufficient
-     * permissions.
-     * @hide
-     */
-    public static BluetoothServerSocket listenUsingScoOn() throws IOException {
-        BluetoothServerSocket socket =
-                new BluetoothServerSocket(BluetoothSocket.TYPE_SCO, false, false, -1);
-        int errno = socket.mSocket.bindListen();
-        if (errno < 0) {
-            //TODO(BT): Throw the same exception error code
-            // that the previous code was using.
-            //socket.mSocket.throwErrnoNative(errno);
-        }
-        return socket;
-    }
-
-    /**
      * Construct an encrypted, authenticated, L2CAP server socket.
      * Call #accept to retrieve connections to this socket.
      * <p>To auto assign a port without creating a SDP record use
      * {@link #SOCKET_CHANNEL_AUTO_STATIC_NO_SDP} as port number.
      *
      * @param port the PSM to listen on
-     * @param mitm enforce man-in-the-middle protection for authentication.
+     * @param mitm enforce person-in-the-middle protection for authentication.
      * @param min16DigitPin enforce a pin key length og minimum 16 digit for sec mode 2
      * connections.
      * @return An L2CAP BluetoothServerSocket
@@ -2959,6 +2925,9 @@ public final class BluetoothAdapter {
                 return true;
             }
             return false;
+        } else if (profile == BluetoothProfile.VOLUME_CONTROL) {
+            BluetoothVolumeControl vcs = new BluetoothVolumeControl(context, listener, this);
+            return true;
         } else {
             return false;
         }
@@ -3049,6 +3018,11 @@ public final class BluetoothAdapter {
             case BluetoothProfile.HEARING_AID:
                 BluetoothHearingAid hearingAid = (BluetoothHearingAid) proxy;
                 hearingAid.close();
+                break;
+            case BluetoothProfile.VOLUME_CONTROL:
+                BluetoothVolumeControl vcs = (BluetoothVolumeControl) proxy;
+                vcs.close();
+                break;
         }
     }
 
@@ -3144,6 +3118,16 @@ public final class BluetoothAdapter {
                             }
                         });
                     }
+                    synchronized (mBluetoothConnectionCallbackExecutorMap) {
+                        if (!mBluetoothConnectionCallbackExecutorMap.isEmpty()) {
+                            try {
+                                mService.registerBluetoothConnectionCallback(mConnectionCallback);
+                            } catch (RemoteException e) {
+                                Log.e(TAG, "onBluetoothServiceUp: Failed to register bluetooth"
+                                        + "connection callback", e);
+                            }
+                        }
+                    }
                 }
 
                 public void onBluetoothServiceDown() {
@@ -3210,6 +3194,164 @@ public final class BluetoothAdapter {
             Log.e(TAG, "", e);
         }
         return false;
+    }
+
+    /** @hide */
+    @Retention(RetentionPolicy.SOURCE)
+    @IntDef(prefix = { "OOB_ERROR_" }, value = {
+        OOB_ERROR_UNKNOWN,
+        OOB_ERROR_ANOTHER_ACTIVE_REQUEST,
+        OOB_ERROR_ADAPTER_DISABLED
+    })
+    public @interface OobError {}
+
+    /**
+     * An unknown error has occurred in the controller, stack, or callback pipeline.
+     *
+     * @hide
+     */
+    @SystemApi
+    public static final int OOB_ERROR_UNKNOWN = 0;
+
+    /**
+     * If another application has already requested {@link OobData} then another fetch will be
+     * disallowed until the callback is removed.
+     *
+     * @hide
+     */
+    @SystemApi
+    public static final int OOB_ERROR_ANOTHER_ACTIVE_REQUEST = 1;
+
+    /**
+     * The adapter is currently disabled, please enable it.
+     *
+     * @hide
+     */
+    @SystemApi
+    public static final int OOB_ERROR_ADAPTER_DISABLED = 2;
+
+    /**
+     * Provides callback methods for receiving {@link OobData} from the host stack, as well as an
+     * error interface in order to allow the caller to determine next steps based on the {@link
+     * ErrorCode}.
+     *
+     * @hide
+     */
+    @SystemApi
+    public interface OobDataCallback {
+        /**
+         * Handles the {@link OobData} received from the host stack.
+         *
+         * @param transport - whether the {@link OobData} is generated for LE or Classic.
+         * @param oobData - data generated in the host stack(LE) or controller (Classic)
+         */
+        void onOobData(@Transport int transport, @NonNull OobData oobData);
+
+        /**
+         * Provides feedback when things don't go as expected.
+         *
+         * @param errorCode - the code descibing the type of error that occurred.
+         */
+        void onError(@OobError int errorCode);
+    }
+
+    /**
+     * Wraps an AIDL interface around an {@link OobDataCallback} interface.
+     *
+     * @see {@link IBluetoothOobDataCallback} for interface definition.
+     *
+     * @hide
+     */
+    public class WrappedOobDataCallback extends IBluetoothOobDataCallback.Stub {
+        private final OobDataCallback mCallback;
+        private final Executor mExecutor;
+
+        /**
+         * @param callback - object to receive {@link OobData} must be a non null argument
+         *
+         * @throws NullPointerException if the callback is null.
+         */
+        WrappedOobDataCallback(@NonNull OobDataCallback callback,
+                @NonNull @CallbackExecutor Executor executor) {
+            requireNonNull(callback);
+            requireNonNull(executor);
+            mCallback = callback;
+            mExecutor = executor;
+        }
+        /**
+         * Wrapper function to relay to the {@link OobDataCallback#onOobData}
+         *
+         * @param transport - whether the {@link OobData} is generated for LE or Classic.
+         * @param oobData - data generated in the host stack(LE) or controller (Classic)
+         *
+         * @hide
+         */
+        public void onOobData(@Transport int transport, @NonNull OobData oobData) {
+            mExecutor.execute(new Runnable() {
+                public void run() {
+                    mCallback.onOobData(transport, oobData);
+                }
+            });
+        }
+        /**
+         * Wrapper function to relay to the {@link OobDataCallback#onError}
+         *
+         * @param errorCode - the code descibing the type of error that occurred.
+         *
+         * @hide
+         */
+        public void onError(@OobError int errorCode) {
+            mExecutor.execute(new Runnable() {
+                public void run() {
+                    mCallback.onError(errorCode);
+                }
+            });
+        }
+    }
+
+    /**
+     * Fetches a secret data value that can be used for a secure and simple pairing experience.
+     *
+     * <p>This is the Local Out of Band data the comes from the
+     *
+     * <p>This secret is the local Out of Band data.  This data is used to securely and quickly
+     * pair two devices with minimal user interaction.
+     *
+     * <p>For example, this secret can be transferred to a remote device out of band (meaning any
+     * other way besides using bluetooth).  Once the remote device finds this device using the
+     * information given in the data, such as the PUBLIC ADDRESS, the remote device could then
+     * connect to this device using this secret when the pairing sequenece asks for the secret.
+     * This device will respond by automatically accepting the pairing due to the secret being so
+     * trustworthy.
+     *
+     * @param transport - provide type of transport (e.g. LE or Classic).
+     * @param callback - target object to receive the {@link OobData} value.
+     *
+     * @throws NullPointerException if callback is null.
+     * @throws IllegalArgumentException if the transport is not valid.
+     *
+     * @hide
+     */
+    @SystemApi
+    @RequiresPermission(Manifest.permission.BLUETOOTH_PRIVILEGED)
+    public void generateLocalOobData(@Transport int transport,
+            @NonNull @CallbackExecutor Executor executor, @NonNull OobDataCallback callback) {
+        if (transport != BluetoothDevice.TRANSPORT_BREDR && transport
+                != BluetoothDevice.TRANSPORT_LE) {
+            throw new IllegalArgumentException("Invalid transport '" + transport + "'!");
+        }
+        requireNonNull(callback);
+        if (!isEnabled()) {
+            Log.w(TAG, "generateLocalOobData(): Adapter isn't enabled!");
+            callback.onError(OOB_ERROR_ADAPTER_DISABLED);
+        } else {
+            try {
+                mService.generateLocalOobData(transport, new WrappedOobDataCallback(callback,
+                        executor));
+            } catch (RemoteException e) {
+                Log.e(TAG, "", e);
+            }
+        }
     }
 
     /**
@@ -3333,6 +3475,25 @@ public final class BluetoothAdapter {
             }
         }
         return true;
+    }
+
+    /**
+     * Determines whether a String Bluetooth address, such as "00:43:A8:23:10:F0"
+     * is a RANDOM STATIC address.
+     *
+     * RANDOM STATIC: (addr & 0b11) == 0b11
+     * RANDOM RESOLVABLE: (addr & 0b11) == 0b10
+     * RANDOM non-RESOLVABLE: (addr & 0b11) == 0b00
+     *
+     * @param address Bluetooth address as string
+     * @return true if the 2 Least Significant Bits of the address equals 0b11.
+     *
+     * @hide
+     */
+    public static boolean isAddressRandomStatic(@NonNull String address) {
+        requireNonNull(address);
+        return checkBluetoothAddress(address)
+                && (Integer.parseInt(address.split(":")[5], 16) & 0b11) == 0b11;
     }
 
     @UnsupportedAppUsage
@@ -3578,7 +3739,7 @@ public final class BluetoothAdapter {
      * assign a dynamic PSM value. This socket can be used to listen for incoming connections. The
      * supported Bluetooth transport is LE only.
      * <p>The link key is not required to be authenticated, i.e the communication may be vulnerable
-     * to man-in-the-middle attacks. Use {@link #listenUsingL2capChannel}, if an encrypted and
+     * to person-in-the-middle attacks. Use {@link #listenUsingL2capChannel}, if an encrypted and
      * authenticated communication channel is desired.
      * <p>Use {@link BluetoothServerSocket#accept} to retrieve incoming connections from a listening
      * {@link BluetoothServerSocket}.
@@ -3767,6 +3928,280 @@ public final class BluetoothAdapter {
          */
         void onMetadataChanged(@NonNull BluetoothDevice device, int key,
                 @Nullable byte[] value);
+    }
+
+    private final IBluetoothConnectionCallback mConnectionCallback =
+            new IBluetoothConnectionCallback.Stub() {
+        @Override
+        public void onDeviceConnected(BluetoothDevice device) {
+            for (Map.Entry<BluetoothConnectionCallback, Executor> callbackExecutorEntry:
+                    mBluetoothConnectionCallbackExecutorMap.entrySet()) {
+                BluetoothConnectionCallback callback = callbackExecutorEntry.getKey();
+                Executor executor = callbackExecutorEntry.getValue();
+                executor.execute(() -> callback.onDeviceConnected(device));
+            }
+        }
+
+        @Override
+        public void onDeviceDisconnected(BluetoothDevice device, int hciReason) {
+            for (Map.Entry<BluetoothConnectionCallback, Executor> callbackExecutorEntry:
+                    mBluetoothConnectionCallbackExecutorMap.entrySet()) {
+                BluetoothConnectionCallback callback = callbackExecutorEntry.getKey();
+                Executor executor = callbackExecutorEntry.getValue();
+                executor.execute(() -> callback.onDeviceDisconnected(device, hciReason));
+            }
+        }
+    };
+
+    /**
+     * Registers the BluetoothConnectionCallback to receive callback events when a bluetooth device
+     * (classic or low energy) is connected or disconnected.
+     *
+     * @param executor is the callback executor
+     * @param callback is the connection callback you wish to register
+     * @return true if the callback was registered successfully, false otherwise
+     * @throws IllegalArgumentException if the callback is already registered
+     * @hide
+     */
+    public boolean registerBluetoothConnectionCallback(@NonNull @CallbackExecutor Executor executor,
+            @NonNull BluetoothConnectionCallback callback) {
+        if (DBG) Log.d(TAG, "registerBluetoothConnectionCallback()");
+        if (callback == null) {
+            return false;
+        }
+
+        synchronized (mBluetoothConnectionCallbackExecutorMap) {
+            // If the callback map is empty, we register the service-to-app callback
+            if (mBluetoothConnectionCallbackExecutorMap.isEmpty()) {
+                try {
+                    mServiceLock.readLock().lock();
+                    if (mService != null) {
+                        if (!mService.registerBluetoothConnectionCallback(mConnectionCallback)) {
+                            return false;
+                        }
+                    }
+                } catch (RemoteException e) {
+                    Log.e(TAG, "", e);
+                    mBluetoothConnectionCallbackExecutorMap.remove(callback);
+                } finally {
+                    mServiceLock.readLock().unlock();
+                }
+            }
+
+            // Adds the passed in callback to our map of callbacks to executors
+            if (mBluetoothConnectionCallbackExecutorMap.containsKey(callback)) {
+                throw new IllegalArgumentException("This callback has already been registered");
+            }
+            mBluetoothConnectionCallbackExecutorMap.put(callback, executor);
+        }
+
+        return true;
+    }
+
+    /**
+     * Unregisters the BluetoothConnectionCallback that was previously registered by the application
+     *
+     * @param callback is the connection callback you wish to unregister
+     * @return true if the callback was unregistered successfully, false otherwise
+     * @hide
+     */
+    public boolean unregisterBluetoothConnectionCallback(
+            @NonNull BluetoothConnectionCallback callback) {
+        if (DBG) Log.d(TAG, "unregisterBluetoothConnectionCallback()");
+        if (callback == null) {
+            return false;
+        }
+
+        synchronized (mBluetoothConnectionCallbackExecutorMap) {
+            if (mBluetoothConnectionCallbackExecutorMap.remove(callback) != null) {
+                return false;
+            }
+        }
+
+        if (!mBluetoothConnectionCallbackExecutorMap.isEmpty()) {
+            return true;
+        }
+
+        // If the callback map is empty, we unregister the service-to-app callback
+        try {
+            mServiceLock.readLock().lock();
+            if (mService != null) {
+                return mService.unregisterBluetoothConnectionCallback(mConnectionCallback);
+            }
+        } catch (RemoteException e) {
+            Log.e(TAG, "", e);
+        } finally {
+            mServiceLock.readLock().unlock();
+        }
+
+        return false;
+    }
+
+    /**
+     * This abstract class is used to implement callbacks for when a bluetooth classic or Bluetooth
+     * Low Energy (BLE) device is either connected or disconnected.
+     *
+     * @hide
+     */
+    public abstract static class BluetoothConnectionCallback {
+        /**
+         * Callback triggered when a bluetooth device (classic or BLE) is connected
+         * @param device is the connected bluetooth device
+         */
+        public void onDeviceConnected(BluetoothDevice device) {}
+
+        /**
+         * Callback triggered when a bluetooth device (classic or BLE) is disconnected
+         * @param device is the disconnected bluetooth device
+         * @param reason is the disconnect reason
+         */
+        public void onDeviceDisconnected(BluetoothDevice device, @DisconnectReason int reason) {}
+
+        /**
+         * @hide
+         */
+        @Retention(RetentionPolicy.SOURCE)
+        @IntDef(prefix = { "REASON_" }, value = {
+                REASON_UNKNOWN,
+                REASON_LOCAL_REQUEST,
+                REASON_REMOTE_REQUEST,
+                REASON_LOCAL_ERROR,
+                REASON_REMOTE_ERROR,
+                REASON_TIMEOUT,
+                REASON_SECURITY,
+                REASON_SYSTEM_POLICY,
+                REASON_RESOURCE_LIMIT_REACHED,
+                REASON_CONNECTION_EXISTS,
+                REASON_BAD_PARAMETERS})
+        public @interface DisconnectReason {}
+
+        /**
+         * Indicates that the ACL disconnected due to an unknown reason.
+         */
+        public static final int REASON_UNKNOWN = 0;
+
+        /**
+         * Indicates that the ACL disconnected due to an explicit request from the local device.
+         * <p>
+         * Example cause: This is a normal disconnect reason, e.g., user/app initiates
+         * disconnection.
+         */
+        public static final int REASON_LOCAL_REQUEST = 1;
+
+        /**
+         * Indicates that the ACL disconnected due to an explicit request from the remote device.
+         * <p>
+         * Example cause: This is a normal disconnect reason, e.g., user/app initiates
+         * disconnection.
+         * <p>
+         * Example solution: The app can also prompt the user to check their remote device.
+         */
+        public static final int REASON_REMOTE_REQUEST = 2;
+
+        /**
+         * Generic disconnect reason indicating the ACL disconnected due to an error on the local
+         * device.
+         * <p>
+         * Example solution: Prompt the user to check their local device (e.g., phone, car
+         * headunit).
+         */
+        public static final int REASON_LOCAL_ERROR = 3;
+
+        /**
+         * Generic disconnect reason indicating the ACL disconnected due to an error on the remote
+         * device.
+         * <p>
+         * Example solution: Prompt the user to check their remote device (e.g., headset, car
+         * headunit, watch).
+         */
+        public static final int REASON_REMOTE_ERROR = 4;
+
+        /**
+         * Indicates that the ACL disconnected due to a timeout.
+         * <p>
+         * Example cause: remote device might be out of range.
+         * <p>
+         * Example solution: Prompt user to verify their remote device is on or in
+         * connection/pairing mode.
+         */
+        public static final int REASON_TIMEOUT = 5;
+
+        /**
+         * Indicates that the ACL disconnected due to link key issues.
+         * <p>
+         * Example cause: Devices are either unpaired or remote device is refusing our pairing
+         * request.
+         * <p>
+         * Example solution: Prompt user to unpair and pair again.
+         */
+        public static final int REASON_SECURITY = 6;
+
+        /**
+         * Indicates that the ACL disconnected due to the local device's system policy.
+         * <p>
+         * Example cause: privacy policy, power management policy, permissions, etc.
+         * <p>
+         * Example solution: Prompt the user to check settings, or check with their system
+         * administrator (e.g. some corp-managed devices do not allow OPP connection).
+         */
+        public static final int REASON_SYSTEM_POLICY = 7;
+
+        /**
+         * Indicates that the ACL disconnected due to resource constraints, either on the local
+         * device or the remote device.
+         * <p>
+         * Example cause: controller is busy, memory limit reached, maximum number of connections
+         * reached.
+         * <p>
+         * Example solution: The app should wait and try again. If still failing, prompt the user
+         * to disconnect some devices, or toggle Bluetooth on the local and/or the remote device.
+         */
+        public static final int REASON_RESOURCE_LIMIT_REACHED = 8;
+
+        /**
+         * Indicates that the ACL disconnected because another ACL connection already exists.
+         */
+        public static final int REASON_CONNECTION_EXISTS = 9;
+
+        /**
+         * Indicates that the ACL disconnected due to incorrect parameters passed in from the app.
+         * <p>
+         * Example solution: Change parameters and try again. If error persists, the app can report
+         * telemetry and/or log the error in a bugreport.
+         */
+        public static final int REASON_BAD_PARAMETERS = 10;
+
+        /**
+         * Returns human-readable strings corresponding to {@link DisconnectReason}.
+         */
+        public static String disconnectReasonText(@DisconnectReason int reason) {
+            switch (reason) {
+                case REASON_UNKNOWN:
+                    return "Reason unknown";
+                case REASON_LOCAL_REQUEST:
+                    return "Local request";
+                case REASON_REMOTE_REQUEST:
+                    return "Remote request";
+                case REASON_LOCAL_ERROR:
+                    return "Local error";
+                case REASON_REMOTE_ERROR:
+                    return "Remote error";
+                case REASON_TIMEOUT:
+                    return "Timeout";
+                case REASON_SECURITY:
+                    return "Security";
+                case REASON_SYSTEM_POLICY:
+                    return "System policy";
+                case REASON_RESOURCE_LIMIT_REACHED:
+                    return "Resource constrained";
+                case REASON_CONNECTION_EXISTS:
+                    return "Connection already exists";
+                case REASON_BAD_PARAMETERS:
+                    return "Bad parameters";
+                default:
+                    return "Unrecognized disconnect reason: " + reason;
+            }
+        }
     }
 
     /**

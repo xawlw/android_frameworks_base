@@ -19,7 +19,11 @@
 #include "utils/Log.h"
 
 #include "jni.h"
+<<<<<<< HEAD
 #include <nativehelper/JNIHelp.h>
+=======
+#include <nativehelper/JNIPlatformHelp.h>
+>>>>>>> 1a7b0835ced351de3f8f73b29a3b40996d335e65
 #include <nativehelper/ScopedLocalRef.h>
 #include "android_runtime/AndroidRuntime.h"
 #include "android_runtime/Log.h"

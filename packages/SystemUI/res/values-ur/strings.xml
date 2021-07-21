@@ -88,7 +88,7 @@
     <string name="screenshot_failed_to_capture_text" msgid="7818288545874407451">"ایپ یا آپ کی تنظیم کی جانب سے اسکرین شاٹس لینے کی اجازت نہیں ہے"</string>
     <string name="screenshot_dismiss_ui_description" msgid="934736855340147968">"اسکرین شاٹ برخاست کریں"</string>
     <string name="screenshot_preview_description" msgid="7606510140714080474">"اسکرین شاٹ کا پیش منظر"</string>
-    <string name="screenrecord_name" msgid="2596401223859996572">"سکرین ریکارڈر"</string>
+    <string name="screenrecord_name" msgid="2596401223859996572">"اسکرین ریکارڈر"</string>
     <string name="screenrecord_background_processing_label" msgid="7244617554884238898">"سکرین ریکارڈنگ پروسیس ہورہی ہے"</string>
     <string name="screenrecord_channel_description" msgid="4147077128486138351">"اسکرین ریکارڈ سیشن کیلئے جاری اطلاع"</string>
     <string name="screenrecord_start_label" msgid="1750350278888217473">"ریکارڈنگ شروع کریں؟"</string>
@@ -429,7 +429,7 @@
     <string name="quick_settings_nfc_off" msgid="3465000058515424663">"‏NFC غیر فعال ہے"</string>
     <string name="quick_settings_nfc_on" msgid="1004976611203202230">"‏NFC فعال ہے"</string>
     <string name="quick_settings_screen_record_label" msgid="1594046461509776676">"اسکرین ریکارڈر کریں"</string>
-    <string name="quick_settings_screen_record_start" msgid="1574725369331638985">"آغاز"</string>
+    <string name="quick_settings_screen_record_start" msgid="1574725369331638985">"شروع کریں"</string>
     <string name="quick_settings_screen_record_stop" msgid="8087348522976412119">"روکیں"</string>
     <string name="media_seamless_remote_device" msgid="177033467332920464">"آلہ"</string>
     <string name="recents_swipe_up_onboarding" msgid="2820265886420993995">"ایپس سوئچ کرنے کیلئے اوپر سوائپ کریں"</string>
@@ -718,7 +718,7 @@
     <string name="notification_channel_summary_priority" msgid="7952654515769021553">"گفتگو کے سیکشن کے اوپری حصے پر دکھاتا ہے، تیرتے بلبلے کی طرح ظاہر ہوتا ہے، لاک اسکرین پر پروفائل تصویر دکھاتا ہے"</string>
     <string name="notification_conversation_channel_settings" msgid="2409977688430606835">"ترتیبات"</string>
     <string name="notification_priority_title" msgid="2079708866333537093">"ترجیح"</string>
-    <string name="no_shortcut" msgid="8257177117568230126">"<xliff:g id="APP_NAME">%1$s</xliff:g> گفتگو کی خصوصیات کو سپورٹ نہیں کرتا ہے"</string>
+    <string name="no_shortcut" msgid="8257177117568230126">"<xliff:g id="APP_NAME">%1$s</xliff:g> ایپ گفتگو کی خصوصیات کو سپورٹ نہیں کرتی ہے"</string>
     <string name="bubble_overflow_empty_title" msgid="3120029421991510842">"کوئی حالیہ بلبلہ نہیں"</string>
     <string name="bubble_overflow_empty_subtitle" msgid="2030874469510497397">"حالیہ بلبلے اور برخاست شدہ بلبلے یہاں ظاہر ہوں گے"</string>
     <string name="notification_unblockable_desc" msgid="2073030886006190804">"ان اطلاعات کی ترمیم نہیں کی جا سکتی۔"</string>

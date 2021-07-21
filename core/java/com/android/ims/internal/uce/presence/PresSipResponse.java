@@ -17,6 +17,7 @@
 package com.android.ims.internal.uce.presence;
 
 import android.compat.annotation.UnsupportedAppUsage;
+import android.os.Build;
 import android.os.Parcel;
 import android.os.Parcelable;
 
@@ -34,7 +35,7 @@ public class PresSipResponse implements Parcelable {
      * Gets the Presence command ID.
      * @hide
      */
-    @UnsupportedAppUsage
+    @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
     public PresCmdId getCmdId() {
         return mCmdId;
     }
@@ -43,7 +44,7 @@ public class PresSipResponse implements Parcelable {
      * Sets the Presence command ID.
      * @hide
      */
-    @UnsupportedAppUsage
+    @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
     public void setCmdId(PresCmdId cmdId) {
         this.mCmdId = cmdId;
     }
@@ -52,7 +53,7 @@ public class PresSipResponse implements Parcelable {
      * Gets the request ID.
      * @hide
      */
-    @UnsupportedAppUsage
+    @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
     public int getRequestId() {
         return mRequestId;
     }
@@ -61,7 +62,7 @@ public class PresSipResponse implements Parcelable {
      * Sets the request ID.
      * @hide
      */
-    @UnsupportedAppUsage
+    @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
     public void setRequestId(int requestId) {
         this.mRequestId = requestId;
     }
@@ -70,7 +71,7 @@ public class PresSipResponse implements Parcelable {
      * Gets the SIP response code.
      * @hide
      */
-    @UnsupportedAppUsage
+    @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
     public int getSipResponseCode() {
         return mSipResponseCode;
     }
@@ -79,7 +80,7 @@ public class PresSipResponse implements Parcelable {
      * Sets the SIP response code.
      * @hide
      */
-    @UnsupportedAppUsage
+    @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
     public void setSipResponseCode(int sipResponseCode) {
         this.mSipResponseCode = sipResponseCode;
     }
@@ -90,7 +91,7 @@ public class PresSipResponse implements Parcelable {
      * code.
      * @hide
      */
-    @UnsupportedAppUsage
+    @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
     public String getReasonPhrase() {
         return mReasonPhrase;
     }
@@ -99,7 +100,7 @@ public class PresSipResponse implements Parcelable {
      * Sets the SIP response code reason phrase.
      * @hide
      */
-    @UnsupportedAppUsage
+    @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
     public void setReasonPhrase(String reasonPhrase) {
         this.mReasonPhrase = reasonPhrase;
     }
@@ -108,7 +109,7 @@ public class PresSipResponse implements Parcelable {
      * Gets the SIP retryAfter sec value.
      * @hide
      */
-    @UnsupportedAppUsage
+    @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
     public int getRetryAfter() {
         return mRetryAfter;
     }
@@ -117,7 +118,7 @@ public class PresSipResponse implements Parcelable {
      * Sets the SIP retryAfter sec value
      * @hide
      */
-    @UnsupportedAppUsage
+    @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
     public void setRetryAfter(int retryAfter) {
         this.mRetryAfter = retryAfter;
     }
@@ -145,7 +146,7 @@ public class PresSipResponse implements Parcelable {
      * Constructor for the PresSipResponse class.
      * @hide
      */
-    @UnsupportedAppUsage
+    @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
     public PresSipResponse(){};
 
     /** @hide */

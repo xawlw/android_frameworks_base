@@ -363,7 +363,7 @@
     <string name="quick_settings_rotation_locked_portrait_label" msgid="1194988975270484482">"Wima"</string>
     <string name="quick_settings_rotation_locked_landscape_label" msgid="2000295772687238645">"Mlalo"</string>
     <string name="quick_settings_ime_label" msgid="3351174938144332051">"Mbinu ya uingizaji"</string>
-    <string name="quick_settings_location_label" msgid="2621868789013389163">"Kutambua Mahali"</string>
+    <string name="quick_settings_location_label" msgid="2621868789013389163">"Mahali"</string>
     <string name="quick_settings_location_off_label" msgid="7923929131443915919">"Kitambua eneo kimezimwa"</string>
     <string name="quick_settings_media_device_label" msgid="8034019242363789941">"Kifaa cha faili"</string>
     <string name="quick_settings_rssi_label" msgid="3397615415140356701">"RSSI"</string>
@@ -953,7 +953,7 @@
     <string name="notification_channel_storage" msgid="2720725707628094977">"Hifadhi"</string>
     <string name="notification_channel_hints" msgid="7703783206000346876">"Vidokezo"</string>
     <string name="instant_apps" msgid="8337185853050247304">"Programu Zinazofunguka Papo Hapo"</string>
-    <string name="instant_apps_title" msgid="8942706782103036910">"<xliff:g id="APP">%1$s</xliff:g> inaendelea kutumika"</string>
+    <string name="instant_apps_title" msgid="8942706782103036910">"Programu ya <xliff:g id="APP">%1$s</xliff:g> inatumika"</string>
     <string name="instant_apps_message" msgid="6112428971833011754">"Programu inafunguka bila kusakinishwa."</string>
     <string name="instant_apps_message_with_help" msgid="1816952263531203932">"Programu inafunguka bila kusakinishwa. Gusa ili upate maelezo zaidi."</string>
     <string name="app_info" msgid="5153758994129963243">"Maelezo ya programu"</string>

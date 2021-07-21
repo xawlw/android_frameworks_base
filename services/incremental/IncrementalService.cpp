@@ -23,7 +23,6 @@
 #include <android-base/properties.h>
 #include <android-base/stringprintf.h>
 #include <binder/AppOpsManager.h>
-#include <binder/Nullable.h>
 #include <binder/Status.h>
 #include <sys/stat.h>
 #include <uuid/uuid.h>
@@ -475,6 +474,9 @@ StorageId IncrementalService::createStorage(std::string_view mountPoint,
             return kInvalidStorageId;
         }
         if (!mkdirOrLog(path::join(backing, ".index"), 0777)) {
+            return kInvalidStorageId;
+        }
+        if (!mkdirOrLog(path::join(backing, ".incomplete"), 0777)) {
             return kInvalidStorageId;
         }
         auto status = mVold->mountIncFs(backing, mountTarget, 0, &controlParcel);
@@ -1405,7 +1407,7 @@ void IncrementalService::prepareDataLoaderLocked(IncFsMount& ifs, DataLoaderPara
     }
 
     FileSystemControlParcel fsControlParcel;
-    fsControlParcel.incremental = aidl::make_nullable<IncrementalFileSystemControlParcel>();
+    fsControlParcel.incremental = std::make_optional<IncrementalFileSystemControlParcel>();
     fsControlParcel.incremental->cmd.reset(dup(ifs.control.cmd()));
     fsControlParcel.incremental->pendingReads.reset(dup(ifs.control.pendingReads()));
     fsControlParcel.incremental->log.reset(dup(ifs.control.logs()));

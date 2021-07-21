@@ -27,6 +27,7 @@ import android.database.Cursor;
 import android.media.AudioDeviceInfo;
 import android.net.Uri;
 import android.os.Binder;
+import android.os.Build;
 import android.os.RemoteException;
 import android.provider.MediaStore;
 import android.provider.MediaStore.MediaColumns;
@@ -74,7 +75,7 @@ public class Ringtone {
     private final IRingtonePlayer mRemotePlayer;
     private final Binder mRemoteToken;
 
-    @UnsupportedAppUsage
+    @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
     private MediaPlayer mLocalPlayer;
     private final MyOnCompletionListener mCompletionListener = new MyOnCompletionListener();
 

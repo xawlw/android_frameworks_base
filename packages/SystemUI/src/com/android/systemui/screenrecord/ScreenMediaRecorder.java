@@ -155,9 +155,14 @@ public class ScreenMediaRecorder {
         but at the same time the cpu load is 8-10 times higher and some devices don't support it yet */
         mMediaRecorder.setVideoEncoder(MediaRecorder.VideoEncoder.H264);
         mMediaRecorder.setVideoEncodingProfileLevel(
+<<<<<<< HEAD
                 MediaCodecInfo.CodecProfileLevel.AVCProfileMain,
                 mLowQuality ? MediaCodecInfo.CodecProfileLevel.AVCLevel3
                 : MediaCodecInfo.CodecProfileLevel.AVCLevel42/*level 4.2*/);
+=======
+                MediaCodecInfo.CodecProfileLevel.AVCProfileHigh,
+                MediaCodecInfo.CodecProfileLevel.AVCLevel3);
+>>>>>>> 1a7b0835ced351de3f8f73b29a3b40996d335e65
         mMediaRecorder.setVideoSize(screenWidth, screenHeight);
         mMediaRecorder.setVideoFrameRate(refereshRate);
         mMediaRecorder.setVideoEncodingBitRate(vidBitRate);
@@ -212,12 +217,12 @@ public class ScreenMediaRecorder {
      */
     void end() {
         mMediaRecorder.stop();
-        mMediaProjection.stop();
         mMediaRecorder.release();
-        mMediaRecorder = null;
-        mMediaProjection = null;
         mInputSurface.release();
         mVirtualDisplay.release();
+        mMediaProjection.stop();
+        mMediaRecorder = null;
+        mMediaProjection = null;
         stopInternalAudioRecording();
 
         Log.d(TAG, "end recording");

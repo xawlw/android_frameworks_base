@@ -23,6 +23,11 @@ import android.app.AlertDialog.Builder;
 import android.content.Context;
 import android.content.Intent;
 import android.content.res.Resources;
+<<<<<<< HEAD
+=======
+import android.os.Handler;
+import android.os.Looper;
+>>>>>>> 1a7b0835ced351de3f8f73b29a3b40996d335e65
 import android.os.UserHandle;
 import android.provider.Settings;
 import android.service.quicksettings.Tile;
@@ -41,12 +46,16 @@ import com.android.settingslib.net.DataUsageController;
 import com.android.settingslib.net.DataUsageUtils;
 import com.android.systemui.Prefs;
 import com.android.systemui.R;
+import com.android.systemui.dagger.qualifiers.Background;
+import com.android.systemui.dagger.qualifiers.Main;
 import com.android.systemui.plugins.ActivityStarter;
 import com.android.systemui.plugins.qs.DetailAdapter;
 import com.android.systemui.plugins.qs.QSIconView;
 import com.android.systemui.plugins.qs.QSTile.SignalState;
+import com.android.systemui.plugins.statusbar.StatusBarStateController;
 import com.android.systemui.qs.QSHost;
 import com.android.systemui.qs.SignalTileView;
+import com.android.systemui.qs.logging.QSLogger;
 import com.android.systemui.qs.tileimpl.QSTileImpl;
 import com.android.systemui.statusbar.phone.SystemUIDialog;
 import com.android.systemui.statusbar.policy.KeyguardStateController;
@@ -65,6 +74,7 @@ public class CellularTile extends QSTileImpl<SignalState> {
     private final CellularDetailAdapter mDetailAdapter;
 
     private final CellSignalCallback mSignalCallback = new CellSignalCallback();
+<<<<<<< HEAD
     private final ActivityStarter mActivityStarter;
     private final KeyguardStateController mKeyguard;
 
@@ -75,6 +85,23 @@ public class CellularTile extends QSTileImpl<SignalState> {
         mController = networkController;
         mActivityStarter = activityStarter;
         mKeyguard = keyguardStateController;
+=======
+
+    @Inject
+    public CellularTile(
+            QSHost host,
+            @Background Looper backgroundLooper,
+            @Main Handler mainHandler,
+            MetricsLogger metricsLogger,
+            StatusBarStateController statusBarStateController,
+            ActivityStarter activityStarter,
+            QSLogger qsLogger,
+            NetworkController networkController
+    ) {
+        super(host, backgroundLooper, mainHandler, metricsLogger, statusBarStateController,
+                activityStarter, qsLogger);
+        mController = networkController;
+>>>>>>> 1a7b0835ced351de3f8f73b29a3b40996d335e65
         mDataController = mController.getMobileDataController();
         mDetailAdapter = new CellularDetailAdapter();
         mController.observe(getLifecycle(), mSignalCallback);

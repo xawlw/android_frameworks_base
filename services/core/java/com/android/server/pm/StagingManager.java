@@ -164,6 +164,7 @@ public class StagingManager {
         public void onBootPhase(int phase) {
             if (phase == SystemService.PHASE_BOOT_COMPLETED && sStagingManager != null) {
                 sStagingManager.markStagedSessionsAsSuccessful();
+                sStagingManager.markBootCompleted();
             }
         }
     }
@@ -177,6 +178,10 @@ public class StagingManager {
                 mStagedSessions.put(sessionInfo.sessionId, sessionInfo);
             }
         }
+    }
+
+    private void markBootCompleted() {
+        mApexManager.markBootCompleted();
     }
 
     /**
@@ -198,7 +203,7 @@ public class StagingManager {
             newSigningDetails = ApkSignatureVerifier.verify(apexPath, minSignatureScheme);
         } catch (PackageParserException e) {
             throw new PackageManagerException(SessionInfo.STAGED_SESSION_VERIFICATION_FAILED,
-                    "Failed to parse APEX package " + apexPath, e);
+                    "Failed to parse APEX package " + apexPath + " : " + e, e);
         }
 
         // Get signing details of the existing package
@@ -216,7 +221,8 @@ public class StagingManager {
                 existingApexPkg.applicationInfo.sourceDir, SignatureSchemeVersion.JAR);
         } catch (PackageParserException e) {
             throw new PackageManagerException(SessionInfo.STAGED_SESSION_VERIFICATION_FAILED,
-                    "Failed to parse APEX package " + existingApexPkg.applicationInfo.sourceDir, e);
+                    "Failed to parse APEX package " + existingApexPkg.applicationInfo.sourceDir
+                            + " : " + e, e);
         }
 
         // Verify signing details for upgrade
@@ -278,7 +284,7 @@ public class StagingManager {
                 }
             } catch (PackageParserException e) {
                 throw new PackageManagerException(SessionInfo.STAGED_SESSION_VERIFICATION_FAILED,
-                        "Failed to parse APEX package " + apexInfo.modulePath, e);
+                        "Failed to parse APEX package " + apexInfo.modulePath + " : " + e, e);
             }
             final PackageInfo activePackage = mApexManager.getPackageInfo(packageInfo.packageName,
                     ApexManager.MATCH_ACTIVE_PACKAGE);
@@ -601,13 +607,14 @@ public class StagingManager {
             // If checkpoint is supported, then we only resume sessions if we are in checkpointing
             // mode. If not, we fail all sessions.
             if (supportsCheckpoint() && !needsCheckpoint()) {
-                String errorMsg = "Reverting back to safe state. Marking " + session.sessionId
-                        + " as failed";
-                if (!TextUtils.isEmpty(mFailureReason)) {
-                    errorMsg = errorMsg + ": " + mFailureReason;
+                String revertMsg = "Reverting back to safe state. Marking "
+                        + session.sessionId + " as failed.";
+                final String reasonForRevert = getReasonForRevert();
+                if (!TextUtils.isEmpty(reasonForRevert)) {
+                    revertMsg += " Reason for revert: " + reasonForRevert;
                 }
-                Slog.d(TAG, errorMsg);
-                session.setStagedSessionFailed(SessionInfo.STAGED_SESSION_UNKNOWN, errorMsg);
+                Slog.d(TAG, revertMsg);
+                session.setStagedSessionFailed(SessionInfo.STAGED_SESSION_UNKNOWN, revertMsg);
                 return;
             }
         } catch (RemoteException e) {
@@ -683,6 +690,16 @@ public class StagingManager {
                 mApexManager.markStagedSessionSuccessful(session.sessionId);
             }
         }
+    }
+
+    private String getReasonForRevert() {
+        if (!TextUtils.isEmpty(mFailureReason)) {
+            return mFailureReason;
+        }
+        if (!TextUtils.isEmpty(mNativeFailureReason)) {
+            return "Session reverted due to crashing native process: " + mNativeFailureReason;
+        }
+        return "";
     }
 
     private List<String> findAPKsInDir(File stageDir) {
@@ -1427,7 +1444,7 @@ public class StagingManager {
         }
 
         /**
-         * A dummy state for starting the pre reboot verification.
+         * A placeholder state for starting the pre reboot verification.
          *
          * See {@link PreRebootVerificationHandler} to see all nodes of pre reboot verification
          */

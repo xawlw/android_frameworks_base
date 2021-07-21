@@ -137,6 +137,7 @@
     </plurals>
     <string name="clock_title_default" msgid="6342735240617459864">"डीफॉल्ट"</string>
     <string name="clock_title_bubble" msgid="2204559396790593213">"बबल"</string>
+<<<<<<< HEAD
     <string name="clock_title_analog" msgid="8409262532900918273">"ॲनालॉग"</string>
     <plurals name="type_clock_header" formatted="false" msgid="6782840450655632763">
       <item quantity="one">"<annotation name="color">"वेळ"</annotation>\n"ता\nमि</item>
@@ -218,4 +219,7 @@
     <item msgid="848339003778952950">"अठ्ठावन्न\n"</item>
     <item msgid="5798985802835423618">"एकोणसाठ\n"</item>
   </string-array>
+=======
+    <string name="clock_title_analog" msgid="8409262532900918273">"अ‍ॅनालॉग"</string>
+>>>>>>> 1a7b0835ced351de3f8f73b29a3b40996d335e65
 </resources>

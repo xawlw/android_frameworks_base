@@ -65,7 +65,7 @@ public class EventLog {
         private Exception mLastWtf;
 
         // Layout of event log entry received from Android logger.
-        //  see system/core/liblog/include/log/log_read.h
+        //  see system/logging/liblog/include/log/log_read.h
         private static final int LENGTH_OFFSET = 0;
         private static final int HEADER_SIZE_OFFSET = 2;
         private static final int PROCESS_OFFSET = 4;
@@ -86,7 +86,7 @@ public class EventLog {
         private static final byte FLOAT_TYPE = 4;
 
         /** @param data containing event, read from the system */
-        @UnsupportedAppUsage
+        @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
         /*package*/ Event(byte[] data) {
             mBuffer = ByteBuffer.wrap(data);
             mBuffer.order(ByteOrder.nativeOrder());

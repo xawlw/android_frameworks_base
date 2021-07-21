@@ -25,6 +25,7 @@ import android.apex.ApexInfo;
 import android.apex.ApexInfoList;
 import android.apex.ApexSessionInfo;
 import android.apex.ApexSessionParams;
+import android.apex.CompressedApexInfoList;
 import android.apex.IApexService;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageInfo;
@@ -76,6 +77,8 @@ public abstract class ApexManager {
 
     public static final int MATCH_ACTIVE_PACKAGE = 1 << 0;
     static final int MATCH_FACTORY_PACKAGE = 1 << 1;
+
+    private static final String VNDK_APEX_MODULE_NAME_PREFIX = "com.android.vndk.";
 
     private static final Singleton<ApexManager> sApexManagerSingleton =
             new Singleton<ApexManager>() {
@@ -321,9 +324,9 @@ public abstract class ApexManager {
      * Copies the CE apex data directory for the given {@code userId} to a backup location, for use
      * in case of rollback.
      *
-     * @return long inode for the snapshot directory if the snapshot was successful, or -1 if not
+     * @return boolean true if the snapshot was successful
      */
-    public abstract long snapshotCeData(int userId, int rollbackId, String apexPackageName);
+    public abstract boolean snapshotCeData(int userId, int rollbackId, String apexPackageName);
 
     /**
      * Restores the snapshot of the CE apex data directory for the given {@code userId}.
@@ -348,6 +351,26 @@ public abstract class ApexManager {
      * @return boolean true if the delete was successful
      */
     public abstract boolean destroyCeSnapshotsNotSpecified(int userId, int[] retainRollbackIds);
+
+    /**
+     * Inform apexd that the boot has completed.
+     */
+    public abstract void markBootCompleted();
+
+    /**
+     * Estimate how much storage space is needed on /data/ for decompressing apexes
+     * @param infoList List of apexes that are compressed in target build.
+     * @return Size, in bytes, the amount of space needed on /data/
+     */
+    public abstract long calculateSizeForCompressedApex(CompressedApexInfoList infoList)
+            throws RemoteException;
+
+    /**
+     * Reserve space on /data so that apexes can be decompressed after OTA
+     * @param infoList List of apexes that are compressed in target build.
+     */
+    public abstract void reserveSpaceForCompressedApex(CompressedApexInfoList infoList)
+            throws RemoteException;
 
     /**
      * Dumps various state information to the provided {@link PrintWriter} object.
@@ -521,7 +544,9 @@ public abstract class ApexManager {
                         activePackagesSet.add(packageInfo.packageName);
                     }
                     if (ai.isFactory) {
-                        if (factoryPackagesSet.contains(packageInfo.packageName)) {
+                        // Don't throw when the duplicating APEX is VNDK APEX
+                        if (factoryPackagesSet.contains(packageInfo.packageName)
+                                && !ai.moduleName.startsWith(VNDK_APEX_MODULE_NAME_PREFIX)) {
                             throw new IllegalStateException(
                                     "Two factory packages have the same name: "
                                             + packageInfo.packageName);
@@ -820,7 +845,7 @@ public abstract class ApexManager {
         }
 
         @Override
-        public long snapshotCeData(int userId, int rollbackId, String apexPackageName) {
+        public boolean snapshotCeData(int userId, int rollbackId, String apexPackageName) {
             String apexModuleName;
             synchronized (mLock) {
                 Preconditions.checkState(mPackageNameToApexModuleName != null,
@@ -829,13 +854,14 @@ public abstract class ApexManager {
             }
             if (apexModuleName == null) {
                 Slog.e(TAG, "Invalid apex package name: " + apexPackageName);
-                return -1;
+                return false;
             }
             try {
-                return waitForApexService().snapshotCeData(userId, rollbackId, apexModuleName);
+                waitForApexService().snapshotCeData(userId, rollbackId, apexModuleName);
+                return true;
             } catch (Exception e) {
                 Slog.e(TAG, e.getMessage(), e);
-                return -1;
+                return false;
             }
         }
 
@@ -880,6 +906,27 @@ public abstract class ApexManager {
                 Slog.e(TAG, e.getMessage(), e);
                 return false;
             }
+        }
+
+        @Override
+        public void markBootCompleted() {
+            try {
+                waitForApexService().markBootCompleted();
+            } catch (RemoteException re) {
+                Slog.e(TAG, "Unable to contact apexservice", re);
+            }
+        }
+
+        @Override
+        public long calculateSizeForCompressedApex(CompressedApexInfoList infoList)
+                throws RemoteException {
+            return waitForApexService().calculateSizeForCompressedApex(infoList);
+        }
+
+        @Override
+        public void reserveSpaceForCompressedApex(CompressedApexInfoList infoList)
+                throws RemoteException {
+            waitForApexService().reserveSpaceForCompressedApex(infoList);
         }
 
         /**
@@ -1109,7 +1156,7 @@ public abstract class ApexManager {
         }
 
         @Override
-        public long snapshotCeData(int userId, int rollbackId, String apexPackageName) {
+        public boolean snapshotCeData(int userId, int rollbackId, String apexPackageName) {
             throw new UnsupportedOperationException();
         }
 
@@ -1126,6 +1173,21 @@ public abstract class ApexManager {
         @Override
         public boolean destroyCeSnapshotsNotSpecified(int userId, int[] retainRollbackIds) {
             return true;
+        }
+
+        @Override
+        public void markBootCompleted() {
+            // No-op
+        }
+
+        @Override
+        public long calculateSizeForCompressedApex(CompressedApexInfoList infoList) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public void reserveSpaceForCompressedApex(CompressedApexInfoList infoList) {
+            throw new UnsupportedOperationException();
         }
 
         @Override

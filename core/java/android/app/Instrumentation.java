@@ -62,6 +62,7 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.TimeoutException;
 
 import com.android.internal.util.ssos.PixelPropsUtils;
 
@@ -91,6 +92,8 @@ public class Instrumentation {
     public static final String REPORT_KEY_STREAMRESULT = "stream";
 
     private static final String TAG = "Instrumentation";
+
+    private static final long CONNECT_TIMEOUT_MILLIS = 5000;
 
     /**
      * @hide
@@ -1418,7 +1421,7 @@ public class Instrumentation {
     /**
      * @hide
      */
-    @UnsupportedAppUsage
+    @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
     public void callActivityOnNewIntent(Activity activity, ReferrerIntent intent) {
         final String oldReferrer = activity.mReferrer;
         try {
@@ -1764,7 +1767,7 @@ public class Instrumentation {
      *
      * {@hide}
      */
-    @UnsupportedAppUsage
+    @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
     public int execStartActivitiesAsUser(Context who, IBinder contextThread,
             IBinder token, Activity target, Intent[] intents, Bundle options,
             int userId) {
@@ -1947,7 +1950,7 @@ public class Instrumentation {
      * Special version!
      * @hide
      */
-    @UnsupportedAppUsage
+    @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
     public ActivityResult execStartActivityAsCaller(
             Context who, IBinder contextThread, IBinder token, Activity target,
             Intent intent, int requestCode, Bundle options, IBinder permissionToken,
@@ -1995,7 +1998,7 @@ public class Instrumentation {
      * Special version!
      * @hide
      */
-    @UnsupportedAppUsage
+    @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
     public void execStartActivityFromAppTask(
             Context who, IBinder contextThread, IAppTask appTask,
             Intent intent, Bundle options) {
@@ -2131,6 +2134,13 @@ public class Instrumentation {
      * Equivalent to {@code getUiAutomation(0)}. If a {@link UiAutomation} exists with different
      * flags, the flags on that instance will be changed, and then it will be returned.
      * </p>
+     * <p>
+     * Compatibility mode: This method is infallible for apps targeted for
+     * {@link Build.VERSION_CODES#R} and earlier versions; for apps targeted for later versions, it
+     * will return null if {@link UiAutomation} fails to connect. The caller can check the return
+     * value and retry on error.
+     * </p>
+     *
      * @return The UI automation instance.
      *
      * @see UiAutomation
@@ -2158,6 +2168,12 @@ public class Instrumentation {
      * If a {@link UiAutomation} exists with different flags, the flags on that instance will be
      * changed, and then it will be returned.
      * </p>
+     * <p>
+     * Compatibility mode: This method is infallible for apps targeted for
+     * {@link Build.VERSION_CODES#R} and earlier versions; for apps targeted for later versions, it
+     * will return null if {@link UiAutomation} fails to connect. The caller can check the return
+     * value and retry on error.
+     * </p>
      *
      * @param flags The flags to be passed to the UiAutomation, for example
      *        {@link UiAutomation#FLAG_DONT_SUPPRESS_ACCESSIBILITY_SERVICES}.
@@ -2179,8 +2195,17 @@ public class Instrumentation {
             } else {
                 mUiAutomation.disconnect();
             }
-            mUiAutomation.connect(flags);
-            return mUiAutomation;
+            if (getTargetContext().getApplicationInfo().targetSdkVersion <= Build.VERSION_CODES.R) {
+                mUiAutomation.connect(flags);
+                return mUiAutomation;
+            }
+            try {
+                mUiAutomation.connectWithTimeout(flags, CONNECT_TIMEOUT_MILLIS);
+                return mUiAutomation;
+            } catch (TimeoutException e) {
+                mUiAutomation.destroy();
+                mUiAutomation = null;
+            }
         }
         return null;
     }

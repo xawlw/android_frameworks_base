@@ -20,7 +20,6 @@ import static android.app.ActivityThread.DEBUG_CONFIGURATION;
 
 import android.annotation.NonNull;
 import android.annotation.Nullable;
-import android.annotation.TestApi;
 import android.compat.annotation.UnsupportedAppUsage;
 import android.content.pm.ActivityInfo;
 import android.content.pm.ApplicationInfo;
@@ -1067,7 +1066,6 @@ public class ResourcesManager {
         return newKey;
     }
 
-    @TestApi
     public final boolean applyConfigurationToResources(@NonNull Configuration config,
             @Nullable CompatibilityInfo compat) {
         synchronized(this) {

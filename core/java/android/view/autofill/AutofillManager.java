@@ -509,7 +509,7 @@ public final class AutofillManager {
 
     /**
      * Views that were otherwised not important for autofill but triggered a session because the
-     * context is whitelisted for augmented autofill.
+     * context is allowlisted for augmented autofill.
      */
     @GuardedBy("mLock")
     @Nullable private Set<AutofillId> mEnteredForAugmentedAutofillIds;
@@ -1911,7 +1911,10 @@ public final class AutofillManager {
         if (client == null) {
             return;
         }
-
+        if (mService == null) {
+            Log.w(TAG, "Autofill service is null!");
+            return;
+        }
         if (mServiceClient == null) {
             mServiceClient = new AutofillManagerClient(this);
             try {
@@ -2032,7 +2035,7 @@ public final class AutofillManager {
     /**
      * Explicitly limits augmented autofill to the given packages and activities.
      *
-     * <p>To reset the whitelist, call it passing {@code null} to both arguments.
+     * <p>To reset the allowlist, call it passing {@code null} to both arguments.
      *
      * <p>Useful when the service wants to restrict augmented autofill to a category of apps, like
      * apps that uses addresses. For example, if the service wants to support augmented autofill on
@@ -2048,7 +2051,6 @@ public final class AutofillManager {
      * @hide
      */
     @SystemApi
-    @TestApi
     public void setAugmentedAutofillWhitelist(@Nullable Set<String> packages,
             @Nullable Set<ComponentName> activities) {
         if (!hasAutofillFeature()) {
@@ -2079,7 +2081,7 @@ public final class AutofillManager {
     }
 
     /**
-     * Notifies that a non-autofillable view was entered because the activity is whitelisted for
+     * Notifies that a non-autofillable view was entered because the activity is allowlisted for
      * augmented autofill.
      *
      * <p>This method is necessary to set the right flag on start, so the server-side session

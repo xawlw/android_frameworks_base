@@ -28,7 +28,6 @@ import android.annotation.SdkConstant;
 import android.annotation.SdkConstant.SdkConstantType;
 import android.annotation.SuppressLint;
 import android.annotation.SystemApi;
-import android.annotation.TestApi;
 import android.app.AppGlobals;
 import android.compat.annotation.UnsupportedAppUsage;
 import android.content.pm.ActivityInfo;
@@ -1747,7 +1746,6 @@ public class Intent implements Parcelable, Cloneable {
      * @hide
      */
     @SystemApi
-    @TestApi
     public static final String EXTRA_ORIGINATING_UID
             = "android.intent.extra.ORIGINATING_UID";
 
@@ -1978,7 +1976,6 @@ public class Intent implements Parcelable, Cloneable {
     @RequiresPermission(android.Manifest.permission.MANAGE_ROLE_HOLDERS)
     @SdkConstant(SdkConstantType.ACTIVITY_INTENT_ACTION)
     @SystemApi
-    @TestApi
     public static final String ACTION_MANAGE_DEFAULT_APP =
             "android.intent.action.MANAGE_DEFAULT_APP";
 
@@ -1993,7 +1990,6 @@ public class Intent implements Parcelable, Cloneable {
      * @hide
      */
     @SystemApi
-    @TestApi
     public static final String EXTRA_ROLE_NAME = "android.intent.extra.ROLE_NAME";
 
     /**
@@ -2328,20 +2324,13 @@ public class Intent implements Parcelable, Cloneable {
     @SdkConstant(SdkConstantType.BROADCAST_INTENT_ACTION)
     public static final String ACTION_TIMEZONE_CHANGED = "android.intent.action.TIMEZONE_CHANGED";
     /**
-     * Clear DNS Cache Action: This is broadcast when networks have changed and old
-     * DNS entries should be tossed.
-     * @hide
-     */
-    @SdkConstant(SdkConstantType.BROADCAST_INTENT_ACTION)
-    public static final String ACTION_CLEAR_DNS_CACHE = "android.intent.action.CLEAR_DNS_CACHE";
-    /**
      * Alarm Changed Action: This is broadcast when the AlarmClock
      * application's alarm is set or unset.  It is used by the
      * AlarmClock application and the StatusBar service.
      * @hide
      */
     @SdkConstant(SdkConstantType.BROADCAST_INTENT_ACTION)
-    @UnsupportedAppUsage
+    @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
     public static final String ACTION_ALARM_CHANGED = "android.intent.action.ALARM_CHANGED";
 
     /**
@@ -2538,7 +2527,7 @@ public class Intent implements Parcelable, Cloneable {
      *
      * @hide
      */
-    @SystemApi @TestApi
+    @SystemApi
     @SdkConstant(SdkConstantType.BROADCAST_INTENT_ACTION)
     public static final String ACTION_ROLLBACK_COMMITTED =
             "android.intent.action.ROLLBACK_COMMITTED";
@@ -2861,7 +2850,7 @@ public class Intent implements Parcelable, Cloneable {
      * This should <em>only</em> be used to determine when the wallpaper
      * has changed to show the new wallpaper to the user.  You should certainly
      * never, in response to this, change the wallpaper or other attributes of
-     * it such as the suggested size.  That would be crazy, right?  You'd cause
+     * it such as the suggested size.  That would be unexpected, right?  You'd cause
      * all kinds of loops, especially if other apps are doing similar things,
      * right?  Of course.  So please don't do this.
      *
@@ -3679,7 +3668,7 @@ public class Intent implements Parcelable, Cloneable {
      * {@link android.Manifest.permission#MANAGE_USERS} to receive this broadcast.
      * @hide
      */
-    @UnsupportedAppUsage
+    @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
     public static final String ACTION_USER_SWITCHED =
             "android.intent.action.USER_SWITCHED";
 
@@ -3975,7 +3964,7 @@ public class Intent implements Parcelable, Cloneable {
     public static final String ACTION_MASTER_CLEAR = "android.intent.action.MASTER_CLEAR";
 
     /**
-     * Broadcast intent sent by the RecoverySystem to inform listeners that a master clear (wipe)
+     * Broadcast intent sent by the RecoverySystem to inform listeners that a global clear (wipe)
      * is about to be performed.
      * @hide
      */
@@ -7410,7 +7399,7 @@ public class Intent implements Parcelable, Cloneable {
     }
 
     /** @hide */
-    @UnsupportedAppUsage
+    @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
     public static Intent parseCommandArgs(ShellCommand cmd, CommandOptionHandler optionHandler)
             throws URISyntaxException {
         Intent intent = new Intent();
@@ -7801,7 +7790,7 @@ public class Intent implements Parcelable, Cloneable {
     }
 
     /** @hide */
-    @UnsupportedAppUsage
+    @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
     public static void printIntentArgsHelp(PrintWriter pw, String prefix) {
         final String[] lines = new String[] {
                 "<INTENT> specifications include these flags and arguments:",
@@ -8091,7 +8080,7 @@ public class Intent implements Parcelable, Cloneable {
     }
 
     /** {@hide} */
-    @UnsupportedAppUsage
+    @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
     public void setAllowFds(boolean allowFds) {
         if (mExtras != null) {
             mExtras.setAllowFds(allowFds);
@@ -10438,7 +10427,7 @@ public class Intent implements Parcelable, Cloneable {
     }
 
     /** @hide */
-    @UnsupportedAppUsage
+    @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
     public String toInsecureString() {
         StringBuilder b = new StringBuilder(128);
 
@@ -11121,7 +11110,7 @@ public class Intent implements Parcelable, Cloneable {
      *
      * @hide
      */
-    @UnsupportedAppUsage
+    @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
     public void prepareToLeaveProcess(Context context) {
         final boolean leavingPackage = (mComponent == null)
                 || !Objects.equals(mComponent.getPackageName(), context.getPackageName());

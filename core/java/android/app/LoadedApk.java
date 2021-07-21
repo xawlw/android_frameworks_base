@@ -103,7 +103,6 @@ final class ServiceConnectionLeaked extends AndroidRuntimeException {
 public final class LoadedApk {
     static final String TAG = "LoadedApk";
     static final boolean DEBUG = false;
-    private static final String PROPERTY_NAME_APPEND_NATIVE = "pi.append_native_lib_paths";
 
     @UnsupportedAppUsage
     private final ActivityThread mActivityThread;
@@ -118,7 +117,7 @@ public final class LoadedApk {
     private String[] mOverlayDirs;
     @UnsupportedAppUsage
     private String mDataDir;
-    @UnsupportedAppUsage
+    @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
     private String mLibDir;
     @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.P, trackingBug = 115609023)
     private File mDataDirFile;
@@ -287,7 +286,7 @@ public final class LoadedApk {
         return mSecurityViolation;
     }
 
-    @UnsupportedAppUsage
+    @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
     public CompatibilityInfo getCompatibilityInfo() {
         return mDisplayAdjustments.getCompatibilityInfo();
     }
@@ -885,8 +884,23 @@ public final class LoadedApk {
         if (DEBUG) Slog.v(ActivityThread.TAG, "Class path: " + zip +
                     ", JNI path: " + librarySearchPath);
 
-        boolean needToSetupJitProfiles = false;
+        boolean registerAppInfoToArt = false;
         if (mDefaultClassLoader == null) {
+            // Setup the dex reporter to notify package manager
+            // of any relevant dex loads. The idle maintenance job will use the information
+            // reported to optimize the loaded dex files.
+            // Note that we only need one global reporter per app.
+            // Make sure we do this before creating the main app classloader for the first time
+            // so that we can capture the complete application startup.
+            //
+            // We should not do this in a zygote context (where mActivityThread will be null),
+            // thus we'll guard against it.
+            // Also, the system server reporter (SystemServerDexLoadReporter) is already registered
+            // when system server starts, so we don't need to do it here again.
+            if (mActivityThread != null && !ActivityThread.isSystem()) {
+                BaseDexClassLoader.setReporter(DexLoadReporter.getInstance());
+            }
+
             // Temporarily disable logging of disk reads on the Looper thread
             // as this is early and necessary.
             StrictMode.ThreadPolicy oldPolicy = allowThreadDiskReads();
@@ -903,10 +917,10 @@ public final class LoadedApk {
 
             setThreadPolicy(oldPolicy);
             // Setup the class loader paths for profiling.
-            needToSetupJitProfiles = true;
+            registerAppInfoToArt = true;
         }
 
-        if (!libPaths.isEmpty() && SystemProperties.getBoolean(PROPERTY_NAME_APPEND_NATIVE, true)) {
+        if (!libPaths.isEmpty()) {
             // Temporarily disable logging of disk reads on the Looper thread as this is necessary
             StrictMode.ThreadPolicy oldPolicy = allowThreadDiskReads();
             try {
@@ -920,7 +934,7 @@ public final class LoadedApk {
             final String add = TextUtils.join(File.pathSeparator, addedPaths);
             ApplicationLoaders.getDefault().addPath(mDefaultClassLoader, add);
             // Setup the new code paths for profiling.
-            needToSetupJitProfiles = true;
+            registerAppInfoToArt = true;
         }
 
         // Setup jit profile support.
@@ -934,8 +948,8 @@ public final class LoadedApk {
         // loads code from) so we explicitly disallow it there.
         //
         // It is not ok to call this in a zygote context where mActivityThread is null.
-        if (needToSetupJitProfiles && !ActivityThread.isSystem() && mActivityThread != null) {
-            setupJitProfileSupport();
+        if (registerAppInfoToArt && !ActivityThread.isSystem() && mActivityThread != null) {
+            registerAppInfoToArt();
         }
 
         // Call AppComponentFactory to select/create the main class loader of this app.
@@ -985,19 +999,7 @@ public final class LoadedApk {
         }
     }
 
-    private void setupJitProfileSupport() {
-        if (!SystemProperties.getBoolean("dalvik.vm.usejitprofiles", false)) {
-            return;
-        }
-
-        // If we use profiles, setup the dex reporter to notify package manager
-        // of any relevant dex loads. The idle maintenance job will use the information
-        // reported to optimize the loaded dex files.
-        // Note that we only need one global reporter per app.
-        // Make sure we do this before invoking app code for the first time so that we
-        // can capture the complete application startup.
-        BaseDexClassLoader.setReporter(DexLoadReporter.getInstance());
-
+    private void registerAppInfoToArt() {
         // Only set up profile support if the loaded apk has the same uid as the
         // current process.
         // Currently, we do not support profiling across different apps.
@@ -1023,9 +1025,19 @@ public final class LoadedApk {
 
         for (int i = codePaths.size() - 1; i >= 0; i--) {
             String splitName = i == 0 ? null : mApplicationInfo.splitNames[i - 1];
-            String profileFile = ArtManager.getCurrentProfilePath(
+            String curProfileFile = ArtManager.getCurrentProfilePath(
                     mPackageName, UserHandle.myUserId(), splitName);
-            VMRuntime.registerAppInfo(profileFile, new String[] {codePaths.get(i)});
+            String refProfileFile = ArtManager.getReferenceProfilePath(
+                    mPackageName, UserHandle.myUserId(), splitName);
+            int codePathType = codePaths.get(i).equals(mApplicationInfo.sourceDir)
+                    ? VMRuntime.CODE_PATH_TYPE_PRIMARY_APK
+                    : VMRuntime.CODE_PATH_TYPE_SPLIT_APK;
+            VMRuntime.registerAppInfo(
+                    mPackageName,
+                    curProfileFile,
+                    refProfileFile,
+                    new String[] {codePaths.get(i)},
+                    codePathType);
         }
 
         // Register the app data directory with the reporter. It will
@@ -1719,7 +1731,7 @@ public final class LoadedApk {
         }
     }
 
-    @UnsupportedAppUsage
+    @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
     public IServiceConnection lookupServiceDispatcher(ServiceConnection c,
             Context context) {
         synchronized (mServices) {
@@ -1785,7 +1797,7 @@ public final class LoadedApk {
 
     static final class ServiceDispatcher {
         private final ServiceDispatcher.InnerConnection mIServiceConnection;
-        @UnsupportedAppUsage
+        @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
         private final ServiceConnection mConnection;
         @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.P, trackingBug = 115609023)
         private final Context mContext;
@@ -1804,7 +1816,7 @@ public final class LoadedApk {
         }
 
         private static class InnerConnection extends IServiceConnection.Stub {
-            @UnsupportedAppUsage
+            @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
             final WeakReference<LoadedApk.ServiceDispatcher> mDispatcher;
 
             InnerConnection(LoadedApk.ServiceDispatcher sd) {
@@ -1823,7 +1835,7 @@ public final class LoadedApk {
         private final ArrayMap<ComponentName, ServiceDispatcher.ConnectionInfo> mActiveConnections
             = new ArrayMap<ComponentName, ServiceDispatcher.ConnectionInfo>();
 
-        @UnsupportedAppUsage
+        @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
         ServiceDispatcher(ServiceConnection conn,
                 Context context, Handler activityThread, int flags) {
             mIServiceConnection = new InnerConnection(this);
@@ -1888,7 +1900,7 @@ public final class LoadedApk {
             return mConnection;
         }
 
-        @UnsupportedAppUsage
+        @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
         IServiceConnection getIServiceConnection() {
             return mIServiceConnection;
         }

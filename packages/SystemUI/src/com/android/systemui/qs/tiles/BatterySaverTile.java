@@ -17,8 +17,13 @@ package com.android.systemui.qs.tiles;
 
 import android.content.Context;
 import android.content.Intent;
+<<<<<<< HEAD
 import android.content.BroadcastReceiver;
 import android.content.IntentFilter;
+=======
+import android.os.Handler;
+import android.os.Looper;
+>>>>>>> 1a7b0835ced351de3f8f73b29a3b40996d335e65
 import android.provider.Settings.Secure;
 import android.service.quicksettings.Tile;
 import android.util.TypedValue;
@@ -33,14 +38,23 @@ import android.widget.Switch;
 import android.widget.TextView;
 
 import com.android.internal.annotations.VisibleForTesting;
+import com.android.internal.logging.MetricsLogger;
 import com.android.internal.logging.nano.MetricsProto.MetricsEvent;
 import com.android.settingslib.graph.BatteryMeterDrawableBase;
 import com.android.systemui.R;
+<<<<<<< HEAD
 import com.android.systemui.Dependency;
 import com.android.systemui.plugins.qs.DetailAdapter;
+=======
+import com.android.systemui.dagger.qualifiers.Background;
+import com.android.systemui.dagger.qualifiers.Main;
+import com.android.systemui.plugins.ActivityStarter;
+>>>>>>> 1a7b0835ced351de3f8f73b29a3b40996d335e65
 import com.android.systemui.plugins.qs.QSTile.BooleanState;
+import com.android.systemui.plugins.statusbar.StatusBarStateController;
 import com.android.systemui.qs.QSHost;
 import com.android.systemui.qs.SecureSetting;
+import com.android.systemui.qs.logging.QSLogger;
 import com.android.systemui.qs.tileimpl.QSTileImpl;
 import com.android.systemui.statusbar.policy.BatteryController;
 
@@ -64,8 +78,18 @@ public class BatterySaverTile extends QSTileImpl<BooleanState> implements
     private Icon mIcon = ResourceIcon.get(com.android.internal.R.drawable.ic_qs_battery_saver);
 
     @Inject
-    public BatterySaverTile(QSHost host, BatteryController batteryController) {
-        super(host);
+    public BatterySaverTile(
+            QSHost host,
+            @Background Looper backgroundLooper,
+            @Main Handler mainHandler,
+            MetricsLogger metricsLogger,
+            StatusBarStateController statusBarStateController,
+            ActivityStarter activityStarter,
+            QSLogger qsLogger,
+            BatteryController batteryController
+    ) {
+        super(host, backgroundLooper, mainHandler, metricsLogger, statusBarStateController,
+                activityStarter, qsLogger);
         mBatteryController = batteryController;
         mBatteryController.observe(getLifecycle(), this);
         int currentUser = host.getUserContext().getUserId();
@@ -73,6 +97,7 @@ public class BatterySaverTile extends QSTileImpl<BooleanState> implements
                 currentUser) {
             @Override
             protected void handleValueChanged(int value, boolean observedChange) {
+                // mHandler is the background handler so calling this is OK
                 handleRefreshState(null);
             }
         };

@@ -25,7 +25,6 @@ import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.annotation.RequiresPermission;
 import android.annotation.SystemApi;
-import android.annotation.TestApi;
 import android.app.Notification;
 import android.bluetooth.BluetoothDevice;
 import android.compat.annotation.UnsupportedAppUsage;
@@ -109,6 +108,20 @@ import java.util.concurrent.ConcurrentHashMap;
  * {@link Call#removeExtras(String...)} methods.
  */
 public abstract class Connection extends Conferenceable {
+
+    /**@hide*/
+    @Retention(RetentionPolicy.SOURCE)
+    @IntDef(prefix = "STATE_", value = {
+            STATE_INITIALIZING,
+            STATE_NEW,
+            STATE_RINGING,
+            STATE_DIALING,
+            STATE_ACTIVE,
+            STATE_HOLDING,
+            STATE_DISCONNECTED,
+            STATE_PULLING_CALL
+    })
+    public @interface ConnectionState {}
 
     /**
      * The connection is initializing. This is generally the first state for a {@code Connection}
@@ -307,7 +320,6 @@ public abstract class Connection extends Conferenceable {
      * @hide
      */
     @SystemApi
-    @TestApi
     public static final int CAPABILITY_SPEED_UP_MT_AUDIO = 0x00040000;
 
     /**
@@ -345,7 +357,6 @@ public abstract class Connection extends Conferenceable {
      * @hide
      */
     @SystemApi
-    @TestApi
     public static final int CAPABILITY_CONFERENCE_HAS_NO_CHILDREN = 0x00200000;
 
     /**
@@ -383,15 +394,17 @@ public abstract class Connection extends Conferenceable {
 
     /**
      * When set, indicates that this {@link Connection} supports initiation of a conference call
-     * by directly adding participants using {@link #onAddConferenceParticipants(List)}.
-     * @hide
+     * by directly adding participants using {@link #onAddConferenceParticipants(List)}. When
+     * participants are added to a {@link Connection}, it will be replaced by a {@link Conference}
+     * instance with {@link #PROPERTY_IS_ADHOC_CONFERENCE} set to indicate that it is an adhoc
+     * conference call.
      */
     public static final int CAPABILITY_ADD_PARTICIPANT = 0x04000000;
 
     /**
      * Indicates that this {@code Connection} can be transferred to another
      * number.
-     * Connection supports the blind and assured call transfer feature.
+     * Connection supports the confirmed and unconfirmed call transfer feature.
      * @hide
      */
     public static final int CAPABILITY_TRANSFER = 0x08000000;
@@ -421,7 +434,6 @@ public abstract class Connection extends Conferenceable {
      * @hide
      */
     @SystemApi
-    @TestApi
     public static final int PROPERTY_EMERGENCY_CALLBACK_MODE = 1<<0;
 
     /**
@@ -432,7 +444,6 @@ public abstract class Connection extends Conferenceable {
      * @hide
      */
     @SystemApi
-    @TestApi
     public static final int PROPERTY_GENERIC_CONFERENCE = 1<<1;
 
     /**
@@ -484,7 +495,6 @@ public abstract class Connection extends Conferenceable {
      * @hide
      */
     @SystemApi
-    @TestApi
     public static final int PROPERTY_IS_DOWNGRADED_CONFERENCE = 1<<6;
 
     /**
@@ -528,14 +538,12 @@ public abstract class Connection extends Conferenceable {
      * @hide
      */
     @SystemApi
-    @TestApi
     public static final int PROPERTY_REMOTELY_HOSTED = 1 << 11;
 
     /**
-     * Set by the framework to indicate that it is an adhoc conference call.
+     * Set by the framework to indicate that a call is an adhoc conference call.
      * <p>
-     * This is used for Outgoing and incoming conference calls.
-     * @hide
+     * This is used for outgoing and incoming conference calls.
      */
     public static final int PROPERTY_IS_ADHOC_CONFERENCE = 1 << 12;
 
@@ -716,7 +724,6 @@ public abstract class Connection extends Conferenceable {
      * @hide
      */
     @SystemApi
-    @TestApi
     public static final String EXTRA_DISABLE_ADD_CALL =
             "android.telecom.extra.DISABLE_ADD_CALL";
 
@@ -788,6 +795,19 @@ public abstract class Connection extends Conferenceable {
     public static final @AudioCodec String EXTRA_AUDIO_CODEC =
             "android.telecom.extra.AUDIO_CODEC";
 
+    /**
+     * Float connection extra key used to store the audio codec bitrate in kbps for the current
+     * {@link Connection}.
+     */
+    public static final String EXTRA_AUDIO_CODEC_BITRATE_KBPS =
+            "android.telecom.extra.AUDIO_CODEC_BITRATE_KBPS";
+
+    /**
+     * Float connection extra key used to store the audio codec bandwidth in khz for the current
+     * {@link Connection}.
+     */
+    public static final String EXTRA_AUDIO_CODEC_BANDWIDTH_KHZ =
+            "android.telecom.extra.AUDIO_CODEC_BANDWIDTH_KHZ";
     /**
      * Connection event used to inform Telecom that it should play the on hold tone.  This is used
      * to play a tone when the peer puts the current call on hold.  Sent to Telecom via
@@ -920,6 +940,46 @@ public abstract class Connection extends Conferenceable {
      */
     public static final String EVENT_RTT_AUDIO_INDICATION_CHANGED =
             "android.telecom.event.RTT_AUDIO_INDICATION_CHANGED";
+
+    /**
+     * Connection event used to signal between the telephony {@link ConnectionService} and Telecom
+     * when device to device messages are sent/received.
+     * <p>
+     * Device to device messages originating from the network are sent by telephony using
+     * {@link Connection#sendConnectionEvent(String, Bundle)} and are routed up to any active
+     * {@link CallDiagnosticService} implementation which is active.
+     * <p>
+     * Likewise, if a {@link CallDiagnosticService} sends a message using
+     * {@link DiagnosticCall#sendDeviceToDeviceMessage(int, int)}, it will be routed to telephony
+     * via {@link Connection#onCallEvent(String, Bundle)}.  The telephony stack will relay the
+     * message to the other device.
+     * @hide
+     */
+    @SystemApi
+    public static final String EVENT_DEVICE_TO_DEVICE_MESSAGE =
+            "android.telecom.event.DEVICE_TO_DEVICE_MESSAGE";
+
+    /**
+     * Sent along with {@link #EVENT_DEVICE_TO_DEVICE_MESSAGE} to indicate the device to device
+     * message type.
+     *
+     * See {@link DiagnosticCall} for more information.
+     * @hide
+     */
+    @SystemApi
+    public static final String EXTRA_DEVICE_TO_DEVICE_MESSAGE_TYPE =
+            "android.telecom.extra.DEVICE_TO_DEVICE_MESSAGE_TYPE";
+
+    /**
+     * Sent along with {@link #EVENT_DEVICE_TO_DEVICE_MESSAGE} to indicate the device to device
+     * message value.
+     * <p>
+     * See {@link DiagnosticCall} for more information.
+     * @hide
+     */
+    @SystemApi
+    public static final String EXTRA_DEVICE_TO_DEVICE_MESSAGE_VALUE =
+            "android.telecom.extra.DEVICE_TO_DEVICE_MESSAGE_VALUE";
 
     // Flag controlling whether PII is emitted into the logs
     private static final boolean PII_DEBUG = Log.isLoggable(android.util.Log.DEBUG);
@@ -1109,6 +1169,10 @@ public abstract class Connection extends Conferenceable {
 
         if ((properties & PROPERTY_IS_ADHOC_CONFERENCE) == PROPERTY_IS_ADHOC_CONFERENCE) {
             builder.append(isLong ? " PROPERTY_IS_ADHOC_CONFERENCE" : " adhoc_conf");
+        }
+
+        if ((properties & PROPERTY_IS_DOWNGRADED_CONFERENCE) == PROPERTY_IS_DOWNGRADED_CONFERENCE) {
+            builder.append(isLong ? " PROPERTY_IS_DOWNGRADED_CONFERENCE" : " dngrd_conf");
         }
 
         builder.append("]");
@@ -1672,11 +1736,13 @@ public abstract class Connection extends Conferenceable {
         public abstract void onSetDeviceOrientation(int rotation);
 
         /**
-         * Sets camera zoom ratio.
+         * Sets the camera zoom ratio.
          * <p>
          * Sent from the {@link InCallService} via {@link InCallService.VideoCall#setZoom(float)}.
          *
-         * @param value The camera zoom ratio.
+         * @param value The camera zoom ratio; for the current camera, should be a value in the
+         * range defined by
+         * {@link android.hardware.camera2.CameraCharacteristics#CONTROL_ZOOM_RATIO_RANGE}.
          */
         public abstract void onSetZoom(float value);
 
@@ -2071,7 +2137,6 @@ public abstract class Connection extends Conferenceable {
      * @hide
      */
     @SystemApi
-    @TestApi
     public final @Nullable String getTelecomCallId() {
         return mTelecomCallId;
     }
@@ -2188,7 +2253,6 @@ public abstract class Connection extends Conferenceable {
      * @hide
      */
     @SystemApi
-    @TestApi
     public final @IntRange(from = 0) long getConnectTimeMillis() {
         return mConnectTimeMillis;
     }
@@ -2213,7 +2277,6 @@ public abstract class Connection extends Conferenceable {
      * @hide
      */
     @SystemApi
-    @TestApi
     public final @ElapsedRealtimeLong long getConnectionStartElapsedRealtimeMillis() {
         return mConnectElapsedTimeMillis;
     }
@@ -2296,7 +2359,6 @@ public abstract class Connection extends Conferenceable {
      * @hide
      */
     @SystemApi
-    @TestApi
     public void setTelecomCallId(@NonNull String callId) {
         mTelecomCallId = callId;
     }
@@ -2645,7 +2707,6 @@ public abstract class Connection extends Conferenceable {
      * @hide
      */
     @SystemApi
-    @TestApi
     @RequiresPermission(MODIFY_PHONE_STATE)
     public final void setConnectTimeMillis(@IntRange(from = 0) long connectTimeMillis) {
         mConnectTimeMillis = connectTimeMillis;
@@ -2668,7 +2729,6 @@ public abstract class Connection extends Conferenceable {
      * @hide
      */
     @SystemApi
-    @TestApi
     @RequiresPermission(MODIFY_PHONE_STATE)
     public final void setConnectionStartElapsedRealtimeMillis(
             @ElapsedRealtimeLong long connectElapsedTimeMillis) {
@@ -2739,7 +2799,6 @@ public abstract class Connection extends Conferenceable {
      * @hide
      */
     @SystemApi
-    @TestApi
     public final void resetConnectionTime() {
         for (Listener l : mListeners) {
             l.onConnectionTimeReset(this);
@@ -3010,6 +3069,26 @@ public abstract class Connection extends Conferenceable {
     public void onCallAudioStateChanged(CallAudioState state) {}
 
     /**
+     * Inform this Connection when it will or will not be tracked by an {@link InCallService} which
+     * can provide an InCall UI.
+     * This is primarily intended for use by Connections reported by self-managed
+     * {@link ConnectionService} which typically maintain their own UI.
+     *
+     * @param isUsingAlternativeUi Indicates whether an InCallService that can provide InCall UI is
+     *                             currently tracking the self-managed call.
+     */
+    public void onUsingAlternativeUi(boolean isUsingAlternativeUi) {}
+
+    /**
+     * Inform this Conenection when it will or will not be tracked by an non-UI
+     * {@link InCallService}.
+     *
+     * @param isTracked Indicates whether an non-UI InCallService is currently tracking the
+     *                 self-managed call.
+     */
+    public void onTrackedByNonUiService(boolean isTracked) {}
+
+    /**
      * Notifies this Connection of an internal state change. This method is called after the
      * state is changed.
      *
@@ -3052,7 +3131,6 @@ public abstract class Connection extends Conferenceable {
      * Supports initiation of a conference call by directly adding participants to an ongoing call.
      *
      * @param participants with which conference call will be formed.
-     * @hide
      */
     public void onAddConferenceParticipants(@NonNull List<Uri> participants) {}
 
@@ -3523,7 +3601,6 @@ public abstract class Connection extends Conferenceable {
      * @hide
      */
     @SystemApi
-    @TestApi
     public void setPhoneAccountHandle(@NonNull PhoneAccountHandle phoneAccountHandle) {
         if (mPhoneAccountHandle != phoneAccountHandle) {
             mPhoneAccountHandle = phoneAccountHandle;
@@ -3542,7 +3619,6 @@ public abstract class Connection extends Conferenceable {
      * @hide
      */
     @SystemApi
-    @TestApi
     public @Nullable PhoneAccountHandle getPhoneAccountHandle() {
         return mPhoneAccountHandle;
     }
@@ -3608,7 +3684,6 @@ public abstract class Connection extends Conferenceable {
      * @hide
      */
     @SystemApi
-    @TestApi
     public void setCallDirection(@Call.Details.CallDirection int callDirection) {
         mCallDirection = callDirection;
     }

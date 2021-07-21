@@ -116,9 +116,12 @@ public class QSFactoryImpl implements QSFactory {
     private final Provider<FPSInfoTile> mFPSInfoTileProvider;
 
     private final Lazy<QSHost> mQsHostLazy;
+    private final Provider<CustomTile.Builder> mCustomTileBuilderProvider;
 
     @Inject
-    public QSFactoryImpl(Lazy<QSHost> qsHostLazy,
+    public QSFactoryImpl(
+            Lazy<QSHost> qsHostLazy,
+            Provider<CustomTile.Builder> customTileBuilderProvider,
             Provider<WifiTile> wifiTileProvider,
             Provider<BluetoothTile> bluetoothTileProvider,
             Provider<CellularTile> cellularTileProvider,
@@ -158,6 +161,8 @@ public class QSFactoryImpl implements QSFactory {
             Provider<ReadingModeTile> readingModeTileProvider,
             Provider<FPSInfoTile> fpsInfoTileProvider) {
         mQsHostLazy = qsHostLazy;
+        mCustomTileBuilderProvider = customTileBuilderProvider;
+
         mWifiTileProvider = wifiTileProvider;
         mBluetoothTileProvider = bluetoothTileProvider;
         mCellularTileProvider = cellularTileProvider;
@@ -287,8 +292,8 @@ public class QSFactoryImpl implements QSFactory {
 
         // Custom tiles
         if (tileSpec.startsWith(CustomTile.PREFIX)) {
-            return CustomTile.create(mQsHostLazy.get(), tileSpec,
-                    mQsHostLazy.get().getUserContext());
+            return CustomTile.create(
+                    mCustomTileBuilderProvider.get(), tileSpec, mQsHostLazy.get().getUserContext());
         }
 
         // Debug tiles.

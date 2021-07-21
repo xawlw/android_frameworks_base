@@ -333,9 +333,12 @@
         <item>"0,1"</item>
     </string-array>
 
+<<<<<<< HEAD
     <!-- The maximum duration (in milliseconds) we expect a network transition to take -->
     <integer name="config_networkTransitionTimeout">40000</integer>
 
+=======
+>>>>>>> 1a7b0835ced351de3f8f73b29a3b40996d335e65
     <!-- Whether/how to notify the user on network switches. See LingerMonitor.java. -->
     <integer translatable="false" name="config_networkNotifySwitchType">0</integer>
 
@@ -347,16 +350,6 @@
          Internet access. Actual device behaviour is controlled by
          Settings.Global.NETWORK_AVOID_BAD_WIFI. This is the default value of that setting. -->
     <integer translatable="false" name="config_networkAvoidBadWifi">1</integer>
-
-    <!-- Configuration hook for the URL returned by ConnectivityManager#getCaptivePortalServerUrl.
-         If empty, the returned value is controlled by Settings.Global.CAPTIVE_PORTAL_HTTP_URL,
-         and if that value is empty, the framework will use a hard-coded default.
-         This is *NOT* a URL that will always be used by the system network validation to detect
-         captive portals: NetworkMonitor may use different strategies and will not necessarily use
-         this URL. NetworkMonitor behaviour should be configured with NetworkStack resource overlays
-         instead. -->
-    <!--suppress CheckTagEmptyBody -->
-    <string translatable="false" name="config_networkCaptivePortalServerUrl"></string>
 
     <!-- If the hardware supports specially marking packets that caused a wakeup of the
          main CPU, set this value to the mark used. -->
@@ -370,7 +363,7 @@
          less than 0x600 -->
     <bool translatable="false" name="config_apfDrop802_3Frames">true</bool>
 
-    <!-- An array of Black listed EtherType, packets with EtherTypes within this array
+    <!-- An array of Denylisted EtherType, packets with EtherTypes within this array
          will be dropped
          TODO: need to put proper values, these are for testing purposes only -->
     <integer-array translatable="false" name="config_apfEthTypeBlackList">
@@ -461,13 +454,9 @@
         -->
     </string-array>
 
-    <!-- Configuration of network interfaces that support WakeOnLAN -->
-    <string-array translatable="false" name="config_wakeonlan_supported_interfaces">
-        <!--
-        <item>wlan0</item>
-        <item>eth0</item>
-        -->
-    </string-array>
+    <!-- Whether the internal vehicle network should remain active even when no
+         apps requested it. -->
+    <bool name="config_vehicleInternalNetworkAlwaysRequested">false</bool>
 
     <!-- This setting is deprecated, please use
          com.android.networkstack.tethering.R.array.config_mobile_hotspot_provision_app instead. -->
@@ -989,7 +978,7 @@
          with the modem or some other restricted hardware, add "/dev/bus/usb/001/"
          to this list.  If this is empty, no parts of the host USB bus will be excluded.
     -->
-    <string-array name="config_usbHostBlacklist" translatable="false">
+    <string-array name="config_usbHostDenylist" translatable="false">
     </string-array>
 
     <!-- List of paths to serial ports that are available to the serial manager.
@@ -1545,7 +1534,15 @@
     <!-- Class name of WallpaperManagerService. -->
     <string name="config_wallpaperManagerServiceName" translatable="false">com.android.server.wallpaper.WallpaperManagerService</string>
 
-    <!-- Enables the TimeZoneRuleManager service. This is the master switch for the updateable time
+    <!-- Specifies priority of automatic time sources. Suggestions from higher entries in the list
+         take precedence over lower ones.
+         See com.android.server.timedetector.TimeDetectorStrategy for available sources. -->
+    <string-array name="config_autoTimeSourcesPriority">
+        <item>network</item>
+        <item>telephony</item>
+    </string-array>
+
+    <!-- Enables the TimeZoneRuleManager service. This is the global switch for the updateable time
          zone update mechanism. -->
     <bool name="config_enableUpdateableTimeZoneRules">false</bool>
 
@@ -1678,6 +1675,21 @@
         -->
     </string-array>
 
+    <!-- Optional IPsec algorithms enabled by this device, defaulting to empty. OEMs can override
+         it by providing a list of algorithm names in an overlay config.xml file.
+
+         As Android releases new versions, more algorithms are becoming mandatory. Mandatory
+         algorithms will be automatically enabled on the device. Optional algorithms need
+         to be explicitly declared in this resource to be enabled.
+             * SDK level 28 makes the following algorithms mandatory : "cbc(aes)", "hmac(md5)",
+               "hmac(sha1)", "hmac(sha256)", "hmac(sha384)", "hmac(sha512)", "rfc4106(gcm(aes))"
+             * SDK level 31 makes the following algorithms mandatory : "rfc3686(ctr(aes))",
+               "xcbc(aes)", "cmac(aes)", "rfc7539esp(chacha20,poly1305)"
+     -->
+    <string-array name="config_optionalIpSecAlgorithms" translatable="false">
+        <!-- Add algorithm here -->
+    </string-array>
+
     <!-- Boolean indicating if current platform supports bluetooth SCO for off call
     use cases -->
     <bool name="config_bluetooth_sco_off_call">true</bool>
@@ -1795,6 +1807,9 @@
          Note: This config is deprecated, please use config_defaultSms instead. -->
     <string name="default_sms_application" translatable="false">com.android.messaging</string>
 
+    <!-- Flag indicating whether the current device supports "Ask every time" for sms-->
+    <bool name="config_sms_ask_every_time_support">true</bool>
+
     <!-- Flag indicating whether the current device allows data.
          If true, this means that the device supports data connectivity through
          the telephony network.
@@ -1833,7 +1848,7 @@
     <string name="config_systemGallery" translatable="false">com.android.gallery3d</string>
 
     <!-- The name of the package that will be allowed to change its components' label/icon. -->
-    <string name="config_overrideComponentUiPackage" translatable="false"></string>
+    <string name="config_overrideComponentUiPackage" translatable="false">com.android.stk</string>
 
     <!-- Enable/disable default bluetooth profiles:
         HSP_AG, ObexObjectPush, Audio, NAP -->
@@ -2315,18 +2330,18 @@
          will be locked. -->
     <bool name="config_multiuserDelayUserDataLocking">false</bool>
 
-    <!-- Whether to only install system packages on a user if they're whitelisted for that user
+    <!-- Whether to only install system packages on a user if they're allowlisted for that user
          type. These are flags and can be freely combined.
-         0  - disable whitelist (install all system packages; no logging)
-         1  - enforce (only install system packages if they are whitelisted)
-         2  - log (log non-whitelisted packages)
-         4  - any package not mentioned in the whitelist file is implicitly whitelisted on all users
+         0  - disable allowlist (install all system packages; no logging)
+         1  - enforce (only install system packages if they are allowlisted)
+         2  - log (log non-allowlisted packages)
+         4  - any package not mentioned in the allowlist file is implicitly allowlisted on all users
          8  - same as 4, but just for the SYSTEM user
          16 - ignore OTAs (don't install system packages during OTAs)
          Common scenarios:
-          - to enable feature (fully enforced) for a complete whitelist: 1
-          - to enable feature for an incomplete whitelist (so use implicit whitelist mode): 5
-          - to enable feature but implicitly whitelist for SYSTEM user to ease local development: 9
+          - to enable feature (fully enforced) for a complete allowlist: 1
+          - to enable feature for an incomplete allowlist (so use implicit allowlist mode): 5
+          - to enable feature but implicitly allowlist for SYSTEM user to ease local development: 9
           - to disable feature completely if it had never been enabled: 16
           - to henceforth disable feature and try to undo its previous effects: 0
         Note: This list must be kept current with PACKAGE_WHITELIST_MODE_PROP in
@@ -2504,25 +2519,25 @@
          Example: com.google.android.myapp/.resolver.MyResolverActivity  -->
     <string name="config_customResolverActivity" translatable="false"></string>
 
-    <!-- Name of the activity or service that prompts the user to reject, accept, or whitelist
+    <!-- Name of the activity or service that prompts the user to reject, accept, or allowlist
          an adb host's public key, when an unwhitelisted host connects to the local adbd.
          Can be customized for other product types -->
     <string name="config_customAdbPublicKeyConfirmationComponent"
             >com.android.systemui/com.android.systemui.usb.UsbDebuggingActivity</string>
 
-    <!-- Name of the activity that prompts the secondary user to acknowledge she/he needs to
+    <!-- Name of the activity that prompts the secondary user to acknowledge they need to
          switch to the primary user to enable USB debugging.
          Can be customized for other product types -->
     <string name="config_customAdbPublicKeyConfirmationSecondaryUserComponent"
             >com.android.systemui/com.android.systemui.usb.UsbDebuggingSecondaryUserActivity</string>
 
-    <!-- Name of the activity or service that prompts the user to reject, accept, or whitelist
+    <!-- Name of the activity or service that prompts the user to reject, accept, or allowlist
          a wireless network for wireless debugging.
          Can be customized for other product types -->
     <string name="config_customAdbWifiNetworkConfirmationComponent"
             >com.android.systemui/com.android.systemui.wifi.WifiDebuggingActivity</string>
 
-    <!-- Name of the activity that prompts the secondary user to acknowledge she/he needs to
+    <!-- Name of the activity that prompts the secondary user to acknowledge they need to
          switch to the primary user to enable wireless debugging.
          Can be customized for other product types -->
     <string name="config_customAdbWifiNetworkConfirmationSecondaryUserComponent"
@@ -2570,7 +2585,7 @@
     <string name="config_appsAuthorizedForSharedAccounts" translatable="false">;com.android.settings;</string>
 
     <!-- Flag indicating that the media framework should not allow changes or mute on any
-         stream or master volumes. -->
+         stream or global volumes. -->
     <bool name="config_useFixedVolume">false</bool>
 
     <!-- The list of IMEs which should be disabled until used.
@@ -2811,6 +2826,9 @@
              eutran : eutranSupportedRelease
              nfc : contactlessSupportedRelease
              crl : rspCrlSupportedVersion
+             nrepc : nrEpcSupportedRelease
+             nr5gc : nr5gcSupportedRelease
+             eutran5gc : eutran5gcSupportedRelease
     -->
     <string-array translatable="false" name="config_telephonyEuiccDeviceCapabilities">
         <!-- Example:
@@ -2822,6 +2840,9 @@
         <item>"eutran,11"</item>
         <item>"nfc,1"</item>
         <item>"crl,1"</item>
+        <item>"nrepc,15"</item>
+        <item>"nr5gc,15"</item>
+        <item>"eutran5gc,15"</item>
         -->
     </string-array>
 
@@ -2920,6 +2941,11 @@
     <!-- IWLAN data service package name to bind to by default. If none is specified in an overlay, an
          empty string is passed in -->
     <string name="config_wlan_data_service_package" translatable="false"></string>
+
+    <!-- Boolean indicating whether the Iwlan data service supports persistence of iwlan ipsec
+         tunnels across service restart. If iwlan tunnels are not persisted across restart,
+         Framework will clean up dangling data connections when service restarts -->
+    <bool name="config_wlan_data_service_conn_persistence_on_restart">true</bool>
 
     <!-- Cellular data service class name to bind to by default. If none is specified in an overlay, an
          empty string is passed in -->
@@ -3403,10 +3429,6 @@
     <!-- True if assistant app should be pinned via Pinner Service -->
     <bool name="config_pinnerAssistantApp">false</bool>
 
-    <!-- List of files pinned by the Pinner Service with the JIT Zygote boot image b/119800099 -->
-    <string-array translatable="false" name="config_jitzygoteBootImagePinnerServiceFiles">
-    </string-array>
-
     <!-- Number of days preloaded file cache should be preserved on a device before it can be
          deleted -->
     <integer name="config_keepPreloadsMinDays">7</integer>
@@ -3425,7 +3447,7 @@
     <string name="config_emergency_call_number" translatable="false">112</string>
 
     <!-- Package name that provides Emergency Dialer -->
-    <string name="config_emergency_dialer_package">com.android.phone</string>
+    <string name="config_emergency_dialer_package" translatable="false">com.android.phone</string>
 
     <!-- Do not translate. Mcc codes whose existence trigger the presence of emergency
          affordances-->
@@ -4147,6 +4169,35 @@
          If non-positive, then the refresh rate is unchanged even if thresholds are configured. -->
     <integer name="config_defaultRefreshRateInZone">0</integer>
 
+    <!-- The display uses different gamma curves for different refresh rates. It's hard for panel
+         vendor to tune the curves to have exact same brightness for different refresh rate. So
+         flicker could be observed at switch time. The issue can be observed on the screen with
+         even full white content at the high brightness. To prevent flickering, we support fixed
+         refresh rates if the display and ambient brightness are equal to or above the provided
+         thresholds. You can define multiple threshold levels as higher brightness environments
+         may have lower display brightness requirements for the flickering is visible. And the
+         high brightness environment could have higher threshold.
+         For example, fixed refresh rate if
+             display brightness >= disp0 && ambient brightness >= amb0
+             || display brightness >= disp1 && ambient brightness >= amb1 -->
+    <integer-array translatable="false" name="config_highDisplayBrightnessThresholdsOfFixedRefreshRate">
+         <!--
+           <item>disp0</item>
+           <item>disp1</item>
+        -->
+    </integer-array>
+
+    <integer-array translatable="false" name="config_highAmbientBrightnessThresholdsOfFixedRefreshRate">
+         <!--
+           <item>amb0</item>
+           <item>amb1</item>
+        -->
+    </integer-array>
+
+    <!-- Default refresh rate in the high zone defined by brightness and ambient thresholds.
+         If non-positive, then the refresh rate is unchanged even if thresholds are configured. -->
+    <integer name="config_fixedRefreshRateInHighZone">0</integer>
+
     <!-- The type of the light sensor to be used by the display framework for things like
          auto-brightness. If unset, then it just gets the default sensor of type TYPE_LIGHT. -->
     <string name="config_displayLightSensorType" translatable="false" />
@@ -4225,10 +4276,6 @@
     only. The component must be part of a system app. -->
     <string name="config_defaultSupervisionProfileOwnerComponent" translatable="false"></string>
 
-    <!-- Whether to artificially interpret all signal strengths as
-         one bar higher than they actually are -->
-    <bool name="config_inflateSignalStrength">false</bool>
-
     <!-- Trigger a warning for notifications with RemoteView objects that are larger in bytes than
     this value (default 1MB)-->
     <integer name="config_notificationWarnRemoteViewSizeBytes">2000000</integer>
@@ -4272,10 +4319,10 @@
          we only enabled it while the device has ability of mixed color spaces composition -->
     <bool name="config_enableWcgMode">false</bool>
 
-    <!-- When true, enables the whitelisted app to handle bug reports from power menu short press. -->
+    <!-- When true, enables the allowlisted app to handle bug reports from power menu short press. -->
     <bool name="config_bugReportHandlerEnabled">false</bool>
 
-    <!-- The package name for the default bug report handler app from power menu short press. This app must be whitelisted. -->
+    <!-- The package name for the default bug report handler app from power menu short press. This app must be allowlisted. -->
     <string name="config_defaultBugReportHandlerApp" translatable="false"></string>
 
     <!-- The default value used for RawContacts.ACCOUNT_NAME when contacts are inserted without this
@@ -4336,6 +4383,11 @@
          check after reboot or airplane mode toggling -->
     <bool translatable="false" name="reset_geo_fencing_check_after_boot_or_apm">false</bool>
 
+    <!-- Boolean indicating whether all CB messages should be disabled on this device. This config
+         is intended to be used by OEMs who need to disable CB messages for regulatory requirements,
+         (e.g. the device is a tablet in a country where tablets should not receive CB messages) -->
+    <bool translatable="false" name="config_disable_all_cb_messages">false</bool>
+
     <!-- Screen Wake Keys
          Determines whether the specified key groups can be used to wake up the device. -->
     <bool name="config_wakeOnDpadKeyPress">true</bool>
@@ -4384,8 +4436,16 @@
     <!-- Component names of the services which will keep critical code path warm -->
     <string-array name="config_keep_warming_services" translatable="false" />
 
+<<<<<<< HEAD
     <!-- Should we vibrate on an icon animation of the shelf. This should only be active if the
      vibrator is capable of subtle vibrations -->
     <bool name="config_vibrateOnIconAnimation">false</bool>
 
+=======
+    <!-- Whether to select voice/data/sms preference without user confirmation -->
+    <bool name="config_voice_data_sms_auto_fallback">false</bool>
+
+    <!-- Whether to allow the caching of the SIM PIN for verification after unattended reboot -->
+    <bool name="config_allow_pin_storage_for_unattended_reboot">true</bool>
+>>>>>>> 1a7b0835ced351de3f8f73b29a3b40996d335e65
 </resources>

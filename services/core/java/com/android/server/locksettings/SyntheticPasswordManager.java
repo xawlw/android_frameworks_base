@@ -150,15 +150,15 @@ public class SyntheticPasswordManager {
     }
 
     /**
-     * This class represents the master cryptographic secret for a given user (a.k.a synthietic
+     * This class represents the main cryptographic secret for a given user (a.k.a synthietic
      * password). This secret is derived from the user's lockscreen credential or password escrow
      * token. All other cryptograhic keys related to the user, including disk encryption key,
      * keystore encryption key, gatekeeper auth key, vendor auth secret and others are directly
      * derived from this token.
      * <p>
-     * The master secret associated with an authentication token is retrievable from
+     * The main secret associated with an authentication token is retrievable from
      * {@link AuthenticationToken#getSyntheticPassword()} and the authentication token can be
-     * reconsturcted from the master secret later with
+     * reconsturcted from the main secret later with
      * {@link AuthenticationToken#recreateDirectly(byte[])}. The first time an authentication token
      * is needed, it should be created with {@link AuthenticationToken#create()} so that the
      * necessary escrow data ({@link #mEncryptedEscrowSplit0} and {@link #mEscrowSplit1}) is
@@ -167,7 +167,7 @@ public class SyntheticPasswordManager {
      * needs to securely store the secret returned from
      * {@link AuthenticationToken#getEscrowSecret()}, and at the time of use, load the escrow data
      * back with {@link AuthenticationToken#setEscrowData(byte[], byte[])} and then re-create the
-     * master secret from the escrow secret via
+     * main secret from the escrow secret via
      * {@link AuthenticationToken#recreateFromEscrow(byte[])}.
      */
     static class AuthenticationToken {
@@ -520,7 +520,7 @@ public class SyntheticPasswordManager {
     public void removeUser(int userId) {
         for (long handle : mStorage.listSyntheticPasswordHandlesForUser(SP_BLOB_NAME, userId)) {
             destroyWeaverSlot(handle, userId);
-            destroySPBlobKey(getHandleName(handle));
+            destroySPBlobKey(getKeyName(handle));
         }
     }
 
@@ -956,7 +956,7 @@ public class SyntheticPasswordManager {
         } else {
             secret = authToken.getSyntheticPassword();
         }
-        byte[] content = createSPBlob(getHandleName(handle), secret, applicationId, sid);
+        byte[] content = createSPBlob(getKeyName(handle), secret, applicationId, sid);
         byte[] blob = new byte[content.length + 1 + 1];
         /*
          * We can upgrade from v1 to v2 because that's just a change in the way that
@@ -1138,10 +1138,10 @@ public class SyntheticPasswordManager {
         }
         final byte[] secret;
         if (version == SYNTHETIC_PASSWORD_VERSION_V1) {
-            secret = SyntheticPasswordCrypto.decryptBlobV1(getHandleName(handle),
+            secret = SyntheticPasswordCrypto.decryptBlobV1(getKeyName(handle),
                     Arrays.copyOfRange(blob, 2, blob.length), applicationId);
         } else {
-            secret = decryptSPBlob(getHandleName(handle),
+            secret = decryptSPBlob(getKeyName(handle),
                 Arrays.copyOfRange(blob, 2, blob.length), applicationId);
         }
         if (secret == null) {
@@ -1236,7 +1236,7 @@ public class SyntheticPasswordManager {
 
     private void destroySyntheticPassword(long handle, int userId) {
         destroyState(SP_BLOB_NAME, handle, userId);
-        destroySPBlobKey(getHandleName(handle));
+        destroySPBlobKey(getKeyName(handle));
         if (hasState(WEAVER_SLOT_NAME, handle, userId)) {
             destroyWeaverSlot(handle, userId);
         }
@@ -1352,7 +1352,7 @@ public class SyntheticPasswordManager {
         }
     }
 
-    private String getHandleName(long handle) {
+    private String getKeyName(long handle) {
         return String.format("%s%x", LockPatternUtils.SYNTHETIC_PASSWORD_KEY_PREFIX, handle);
     }
 
@@ -1412,5 +1412,20 @@ public class SyntheticPasswordManager {
             hexBytes[j * 2 + 1] = HEX_ARRAY[v & 0x0F];
         }
         return hexBytes;
+    }
+
+    /**
+     * Migrate all existing SP keystore keys from uid 1000 app domain to LSS selinux domain
+     */
+    public boolean migrateKeyNamespace() {
+        boolean success = true;
+        final Map<Integer, List<Long>> allHandles =
+                mStorage.listSyntheticPasswordHandlesForAllUsers(SP_BLOB_NAME);
+        for (List<Long> userHandles : allHandles.values()) {
+            for (long handle : userHandles) {
+                success &= SyntheticPasswordCrypto.migrateLockSettingsKey(getKeyName(handle));
+            }
+        }
+        return success;
     }
 }

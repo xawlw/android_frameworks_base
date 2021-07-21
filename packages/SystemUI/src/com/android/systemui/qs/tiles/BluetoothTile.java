@@ -24,7 +24,12 @@ import android.bluetooth.BluetoothProfile;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.drawable.Drawable;
+<<<<<<< HEAD
 import android.os.UserHandle;
+=======
+import android.os.Handler;
+import android.os.Looper;
+>>>>>>> 1a7b0835ced351de3f8f73b29a3b40996d335e65
 import android.provider.Settings;
 import android.service.quicksettings.Tile;
 import android.text.TextUtils;
@@ -38,12 +43,16 @@ import com.android.settingslib.Utils;
 import com.android.settingslib.bluetooth.CachedBluetoothDevice;
 import com.android.settingslib.graph.BluetoothDeviceLayerDrawable;
 import com.android.systemui.R;
+import com.android.systemui.dagger.qualifiers.Background;
+import com.android.systemui.dagger.qualifiers.Main;
 import com.android.systemui.plugins.ActivityStarter;
 import com.android.systemui.plugins.qs.DetailAdapter;
 import com.android.systemui.plugins.qs.QSTile.BooleanState;
+import com.android.systemui.plugins.statusbar.StatusBarStateController;
 import com.android.systemui.qs.QSDetailItems;
 import com.android.systemui.qs.QSDetailItems.Item;
 import com.android.systemui.qs.QSHost;
+import com.android.systemui.qs.logging.QSLogger;
 import com.android.systemui.qs.tileimpl.QSTileImpl;
 import com.android.systemui.statusbar.policy.BluetoothController;
 import com.android.systemui.statusbar.policy.KeyguardStateController;
@@ -60,18 +69,31 @@ public class BluetoothTile extends QSTileImpl<BooleanState> {
 
     private final BluetoothController mController;
     private final BluetoothDetailAdapter mDetailAdapter;
-    private final ActivityStarter mActivityStarter;
 
     private final KeyguardStateController mKeyguard;
 
     @Inject
+<<<<<<< HEAD
     public BluetoothTile(QSHost host,
             BluetoothController bluetoothController,
             ActivityStarter activityStarter,
             KeyguardStateController keyguardStateController) {
         super(host);
+=======
+    public BluetoothTile(
+            QSHost host,
+            @Background Looper backgroundLooper,
+            @Main Handler mainHandler,
+            MetricsLogger metricsLogger,
+            StatusBarStateController statusBarStateController,
+            ActivityStarter activityStarter,
+            QSLogger qsLogger,
+            BluetoothController bluetoothController
+    ) {
+        super(host, backgroundLooper, mainHandler, metricsLogger, statusBarStateController,
+                activityStarter, qsLogger);
+>>>>>>> 1a7b0835ced351de3f8f73b29a3b40996d335e65
         mController = bluetoothController;
-        mActivityStarter = activityStarter;
         mDetailAdapter = (BluetoothDetailAdapter) createDetailAdapter();
         mController.observe(getLifecycle(), mCallback);
 

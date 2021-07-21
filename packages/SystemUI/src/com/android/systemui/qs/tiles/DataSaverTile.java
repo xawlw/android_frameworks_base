@@ -16,22 +16,38 @@ package com.android.systemui.qs.tiles;
 
 import android.content.DialogInterface.OnClickListener;
 import android.content.Intent;
+<<<<<<< HEAD
 import android.os.UserHandle;
+=======
+import android.os.Handler;
+import android.os.Looper;
+>>>>>>> 1a7b0835ced351de3f8f73b29a3b40996d335e65
 import android.provider.Settings;
 import android.service.quicksettings.Tile;
 import android.widget.Switch;
 
+import com.android.internal.logging.MetricsLogger;
 import com.android.internal.logging.nano.MetricsProto.MetricsEvent;
 import com.android.systemui.Prefs;
 import com.android.systemui.R;
+<<<<<<< HEAD
+=======
+import com.android.systemui.dagger.qualifiers.Background;
+import com.android.systemui.dagger.qualifiers.Main;
+>>>>>>> 1a7b0835ced351de3f8f73b29a3b40996d335e65
 import com.android.systemui.plugins.ActivityStarter;
 import com.android.systemui.plugins.qs.QSTile.BooleanState;
+import com.android.systemui.plugins.statusbar.StatusBarStateController;
 import com.android.systemui.qs.QSHost;
+import com.android.systemui.qs.logging.QSLogger;
 import com.android.systemui.qs.tileimpl.QSTileImpl;
 import com.android.systemui.statusbar.phone.SystemUIDialog;
 import com.android.systemui.statusbar.policy.DataSaverController;
+<<<<<<< HEAD
 import com.android.systemui.statusbar.policy.KeyguardStateController;
 import com.android.systemui.statusbar.policy.NetworkController;
+=======
+>>>>>>> 1a7b0835ced351de3f8f73b29a3b40996d335e65
 
 import javax.inject.Inject;
 
@@ -44,10 +60,26 @@ public class DataSaverTile extends QSTileImpl<BooleanState> implements
     private final KeyguardStateController mKeyguard;
 
     @Inject
+<<<<<<< HEAD
     public DataSaverTile(QSHost host, NetworkController networkController,
             ActivityStarter activityStarter, KeyguardStateController keyguardStateController) {
         super(host);
         mDataSaverController = networkController.getDataSaverController();
+=======
+    public DataSaverTile(
+            QSHost host,
+            @Background Looper backgroundLooper,
+            @Main Handler mainHandler,
+            MetricsLogger metricsLogger,
+            StatusBarStateController statusBarStateController,
+            ActivityStarter activityStarter,
+            QSLogger qsLogger,
+            DataSaverController dataSaverController
+    ) {
+        super(host, backgroundLooper, mainHandler, metricsLogger, statusBarStateController,
+                activityStarter, qsLogger);
+        mDataSaverController = dataSaverController;
+>>>>>>> 1a7b0835ced351de3f8f73b29a3b40996d335e65
         mDataSaverController.observe(getLifecycle(), this);
 
         mActivityStarter = activityStarter;
@@ -83,11 +115,13 @@ public class DataSaverTile extends QSTileImpl<BooleanState> implements
         dialog.setTitle(com.android.internal.R.string.data_saver_enable_title);
         dialog.setMessage(com.android.internal.R.string.data_saver_description);
         dialog.setPositiveButton(com.android.internal.R.string.data_saver_enable_button,
-                (OnClickListener) (dialogInterface, which) -> toggleDataSaver());
+                (OnClickListener) (dialogInterface, which) -> {
+                    toggleDataSaver();
+                    Prefs.putBoolean(mContext, Prefs.Key.QS_DATA_SAVER_DIALOG_SHOWN, true);
+                });
         dialog.setNegativeButton(com.android.internal.R.string.cancel, null);
         dialog.setShowForAllUsers(true);
         dialog.show();
-        Prefs.putBoolean(mContext, Prefs.Key.QS_DATA_SAVER_DIALOG_SHOWN, true);
     }
 
     private boolean isUnlockingRequired() {

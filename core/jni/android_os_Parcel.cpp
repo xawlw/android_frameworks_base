@@ -20,7 +20,7 @@
 #include "android_os_Parcel.h"
 #include "android_util_Binder.h"
 
-#include <nativehelper/JNIHelp.h>
+#include <nativehelper/JNIPlatformHelp.h>
 
 #include <fcntl.h>
 #include <stdio.h>
@@ -88,6 +88,14 @@ jobject createJavaParcelObject(JNIEnv* env)
 void recycleJavaParcelObject(JNIEnv* env, jobject parcelObj)
 {
     env->CallVoidMethod(parcelObj, gParcelOffsets.recycle);
+}
+
+static void android_os_Parcel_markSensitive(jlong nativePtr)
+{
+    Parcel* parcel = reinterpret_cast<Parcel*>(nativePtr);
+    if (parcel) {
+        parcel->markSensitive();
+    }
 }
 
 static jint android_os_Parcel_dataSize(jlong nativePtr)
@@ -349,7 +357,7 @@ static jbyteArray android_os_Parcel_createByteArray(JNIEnv* env, jclass clazz, j
     if (parcel != NULL) {
         int32_t len = parcel->readInt32();
 
-        // sanity check the stored length against the true data size
+        // Validate the stored length against the true data size
         if (len >= 0 && len <= (int32_t)parcel->dataAvail()) {
             ret = env->NewByteArray(len);
 
@@ -757,6 +765,8 @@ static jboolean android_os_Parcel_replaceCallingWorkSourceUid(jlong nativePtr, j
 // ----------------------------------------------------------------------------
 
 static const JNINativeMethod gParcelMethods[] = {
+    // @CriticalNative
+    {"nativeMarkSensitive",             "(J)V", (void*)android_os_Parcel_markSensitive},
     // @CriticalNative
     {"nativeDataSize",            "(J)I", (void*)android_os_Parcel_dataSize},
     // @CriticalNative

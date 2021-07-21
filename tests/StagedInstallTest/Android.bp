@@ -12,6 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+package {
+    // See: http://go/android-license-faq
+    // A large-scale-change added 'default_applicable_licenses' to import
+    // all of the 'license_kinds' from "frameworks_base_license"
+    // to get the below license kinds:
+    //   SPDX-license-identifier-Apache-2.0
+    default_applicable_licenses: ["frameworks_base_license"],
+}
+
 android_test_helper_app {
     name: "StagedInstallInternalTestApp",
     manifest: "app/AndroidManifest.xml",
@@ -23,9 +32,17 @@ android_test_helper_app {
 java_test_host {
     name: "StagedInstallInternalTest",
     srcs: ["src/**/*.java"],
-    libs: ["tradefed"],
-    static_libs: ["testng", "compatibility-tradefed"],
+    libs: ["tradefed", "cts-shim-host-lib"],
+    static_libs: [
+        "testng",
+        "compatibility-tradefed",
+        "frameworks-base-hostutils",
+        "cts-install-lib-host",
+    ],
+    data: [
+        ":com.android.apex.cts.shim.v2_prebuilt",
+        ":TestAppAv1",
+    ],
     test_suites: ["general-tests"],
     test_config: "StagedInstallInternalTest.xml",
 }
-

@@ -21,8 +21,8 @@ import static android.app.NotificationManager.AUTOMATIC_RULE_STATUS_ENABLED;
 import static android.app.NotificationManager.AUTOMATIC_RULE_STATUS_REMOVED;
 import static android.app.NotificationManager.Policy.PRIORITY_SENDERS_ANY;
 import static android.service.notification.DNDModeProto.ROOT_CONFIG;
+import static android.util.StatsLog.ANNOTATION_ID_IS_UID;
 
-import static com.android.internal.util.FrameworkStatsLog.ANNOTATION_ID_IS_UID;
 import static com.android.internal.util.FrameworkStatsLog.DND_MODE_RULE;
 
 import android.app.AppOpsManager;
@@ -874,13 +874,13 @@ public class ZenModeHelper {
             final boolean policyChanged = !Objects.equals(getNotificationPolicy(mConfig),
                     getNotificationPolicy(config));
             if (!config.equals(mConfig)) {
+                mConfig = config;
                 dispatchOnConfigChanged();
                 updateConsolidatedPolicy(reason);
             }
             if (policyChanged) {
                 dispatchOnPolicyChanged();
             }
-            mConfig = config;
             mHandler.postApplyConfig(config, reason, triggeringComponent, setRingerMode);
             return true;
         } catch (SecurityException e) {

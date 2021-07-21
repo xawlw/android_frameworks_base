@@ -23,17 +23,30 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.nfc.NfcAdapter;
+<<<<<<< HEAD
 import android.os.UserHandle;
+=======
+import android.os.Handler;
+import android.os.Looper;
+>>>>>>> 1a7b0835ced351de3f8f73b29a3b40996d335e65
 import android.provider.Settings;
 import android.service.quicksettings.Tile;
 import android.widget.Switch;
 
+import com.android.internal.logging.MetricsLogger;
 import com.android.internal.logging.nano.MetricsProto.MetricsEvent;
 import com.android.systemui.R;
 import com.android.systemui.broadcast.BroadcastDispatcher;
+<<<<<<< HEAD
+=======
+import com.android.systemui.dagger.qualifiers.Background;
+import com.android.systemui.dagger.qualifiers.Main;
+>>>>>>> 1a7b0835ced351de3f8f73b29a3b40996d335e65
 import com.android.systemui.plugins.ActivityStarter;
 import com.android.systemui.plugins.qs.QSTile.BooleanState;
+import com.android.systemui.plugins.statusbar.StatusBarStateController;
 import com.android.systemui.qs.QSHost;
+import com.android.systemui.qs.logging.QSLogger;
 import com.android.systemui.qs.tileimpl.QSTileImpl;
 import com.android.systemui.statusbar.policy.KeyguardStateController;
 
@@ -41,6 +54,8 @@ import javax.inject.Inject;
 
 /** Quick settings tile: Enable/Disable NFC **/
 public class NfcTile extends QSTileImpl<BooleanState> {
+
+    private final Icon mIcon = ResourceIcon.get(R.drawable.ic_qs_nfc);
 
     private NfcAdapter mAdapter;
     private BroadcastDispatcher mBroadcastDispatcher;
@@ -52,9 +67,24 @@ public class NfcTile extends QSTileImpl<BooleanState> {
 
 
     @Inject
+<<<<<<< HEAD
     public NfcTile(QSHost host, BroadcastDispatcher broadcastDispatcher,
             ActivityStarter activityStarter, KeyguardStateController keyguardStateController) {
         super(host);
+=======
+    public NfcTile(
+            QSHost host,
+            @Background Looper backgroundLooper,
+            @Main Handler mainHandler,
+            MetricsLogger metricsLogger,
+            StatusBarStateController statusBarStateController,
+            ActivityStarter activityStarter,
+            QSLogger qsLogger,
+            BroadcastDispatcher broadcastDispatcher
+    ) {
+        super(host, backgroundLooper, mainHandler, metricsLogger, statusBarStateController,
+                activityStarter, qsLogger);
+>>>>>>> 1a7b0835ced351de3f8f73b29a3b40996d335e65
         mBroadcastDispatcher = broadcastDispatcher;
 
         mActivityStarter = activityStarter;
@@ -145,7 +175,11 @@ public class NfcTile extends QSTileImpl<BooleanState> {
         state.state = getAdapter() == null
                 ? Tile.STATE_UNAVAILABLE
                 : state.value ? Tile.STATE_ACTIVE : Tile.STATE_INACTIVE;
+<<<<<<< HEAD
         state.icon = ResourceIcon.get(R.drawable.ic_qs_nfc_enabled);
+=======
+        state.icon = mIcon;
+>>>>>>> 1a7b0835ced351de3f8f73b29a3b40996d335e65
         state.label = mContext.getString(R.string.quick_settings_nfc_label);
         state.expandedAccessibilityClassName = Switch.class.getName();
         state.contentDescription = state.label;

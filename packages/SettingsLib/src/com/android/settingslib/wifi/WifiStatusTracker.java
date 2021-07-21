@@ -67,31 +67,40 @@ public class WifiStatusTracker {
         @Override
         public void onCapabilitiesChanged(
                 Network network, NetworkCapabilities networkCapabilities) {
+            WifiInfo wifiInfo = (WifiInfo) networkCapabilities.getTransportInfo();
+            updateWifiInfo(wifiInfo);
+            updateStatusLabel();
+            mCallback.run();
+        }
+
+        @Override
+        public void onLost(Network network) {
+            updateWifiInfo(null);
             updateStatusLabel();
             mCallback.run();
         }
     };
     private final NetworkCallback mDefaultNetworkCallback = new NetworkCallback() {
-                @Override
-                public void onCapabilitiesChanged(Network network, NetworkCapabilities nc) {
-                    // network is now the default network, and its capabilities are nc.
-                    // This method will always be called immediately after the network becomes the
-                    // default, in addition to any time the capabilities change while the network is
-                    // the default.
-                    mDefaultNetwork = network;
-                    mDefaultNetworkCapabilities = nc;
-                    updateStatusLabel();
-                    mCallback.run();
-                }
-                @Override
-                public void onLost(Network network) {
-                    // The system no longer has a default network.
-                    mDefaultNetwork = null;
-                    mDefaultNetworkCapabilities = null;
-                    updateStatusLabel();
-                    mCallback.run();
-                }
-            };
+        @Override
+        public void onCapabilitiesChanged(Network network, NetworkCapabilities nc) {
+            // network is now the default network, and its capabilities are nc.
+            // This method will always be called immediately after the network becomes the
+            // default, in addition to any time the capabilities change while the network is
+            // the default.
+            mDefaultNetwork = network;
+            mDefaultNetworkCapabilities = nc;
+            updateStatusLabel();
+            mCallback.run();
+        }
+        @Override
+        public void onLost(Network network) {
+            // The system no longer has a default network.
+            mDefaultNetwork = null;
+            mDefaultNetworkCapabilities = null;
+            updateStatusLabel();
+            mCallback.run();
+        }
+    };
     private Network mDefaultNetwork = null;
     private NetworkCapabilities mDefaultNetworkCapabilities = null;
     private final Runnable mCallback;
@@ -189,6 +198,7 @@ public class WifiStatusTracker {
         String action = intent.getAction();
         if (action.equals(WifiManager.WIFI_STATE_CHANGED_ACTION)) {
             updateWifiState();
+<<<<<<< HEAD
             if (intent.getIntExtra(WifiManager.EXTRA_WIFI_STATE, WifiManager.WIFI_STATE_UNKNOWN) == WifiManager.WIFI_STATE_ENABLED) {
                 WifiTimeoutReceiver.setTimeoutAlarm(mContext,
                         Settings.Global.getLong(mContext.getContentResolver(),
@@ -216,14 +226,24 @@ public class WifiStatusTracker {
                 WifiTimeoutReceiver.setTimeoutAlarm(mContext,
                         Settings.Global.getLong(mContext.getContentResolver(),
                                 Settings.Global.WIFI_OFF_TIMEOUT, 0));
+=======
+        }
+    }
+
+    private void updateWifiInfo(WifiInfo wifiInfo) {
+        updateWifiState();
+        connected = wifiInfo != null;
+        mWifiInfo = wifiInfo;
+        ssid = null;
+        if (mWifiInfo != null) {
+            if (mWifiInfo.isPasspointAp() || mWifiInfo.isOsuAp()) {
+                ssid = mWifiInfo.getPasspointProviderFriendlyName();
+            } else {
+                ssid = getValidSsid(mWifiInfo);
+>>>>>>> 1a7b0835ced351de3f8f73b29a3b40996d335e65
             }
-            updateStatusLabel();
-            mCallback.run();
-        } else if (action.equals(WifiManager.RSSI_CHANGED_ACTION)) {
-            // Default to -200 as its below WifiManager.MIN_RSSI.
-            updateRssi(intent.getIntExtra(WifiManager.EXTRA_NEW_RSSI, -200));
-            updateStatusLabel();
-            mCallback.run();
+            updateRssi(mWifiInfo.getRssi());
+            maybeRequestNetworkScore();
         }
     }
 
@@ -245,6 +265,9 @@ public class WifiStatusTracker {
     }
 
     private void updateStatusLabel() {
+        if (mWifiManager == null) {
+            return;
+        }
         NetworkCapabilities networkCapabilities;
         isDefaultNetwork = false;
         if (mDefaultNetworkCapabilities != null) {
